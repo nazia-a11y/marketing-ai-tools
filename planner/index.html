@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pipeline Planner</title>
+<meta name="description" content="Work back from a revenue target to the leads, pipeline and marketing budget needed, then get a plain-English review from Claude.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{--navy:#1C2B4A;--blue:#3E5A8A;--clay:#B07A5A;--line:#E8E2DA;--paper:#F8F6F2;--ink:#1F2430;--muted:#6B6B6B;--bar:#CBC6BE;--bg:#F6F5F2}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:Inter,system-ui,sans-serif;color:var(--ink);font-size:15px;line-height:1.55}
+a{color:var(--blue)}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 16px 56px;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{width:36px;height:36px;border-radius:10px;background:var(--navy);display:flex;align-items:center;justify-content:center}
+h1{margin:0;font-size:22px;font-weight:700;color:var(--navy);letter-spacing:-.01em}
+.tag{font-size:12px;font-weight:500;color:#4B5563;background:#E9EBEF;border-radius:999px;padding:3px 10px}
+.gh{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 16px;border-radius:999px;background:var(--navy);color:#fff;font-size:14px;font-weight:600;text-decoration:none}
+.gh:hover{background:var(--clay);color:#fff}
+.lead{margin:0;color:#3A3F4B;max-width:760px;font-size:16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px}
+h2{margin:0 0 4px;font-size:18px;color:var(--navy)}
+h3{margin:0 0 10px;font-size:15px;color:var(--navy)}
+.sub{margin:0 0 14px;color:var(--muted);font-size:14px}
+.layout{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:20px;align-items:start}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;color:#374151}
+input,select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #D1D5DB;border-radius:8px;background:#fff;color:var(--ink);min-height:40px;width:100%}
+input:focus,select:focus{outline:2px solid var(--blue);outline-offset:1px;border-color:var(--blue)}
+.group{margin-top:18px}
+.group h3{margin-bottom:8px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12.5px;font-weight:600;color:var(--muted);padding:0 6px 6px 0}
+td{padding:4px 6px 4px 0;vertical-align:middle}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chan td input{min-height:36px;padding:6px 8px;font-size:14px}
+.total{font-size:13px;margin-top:6px;color:var(--muted)}
+.total.bad{color:#A32D2D;font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.tile{background:var(--paper);border-radius:10px;padding:12px 14px}
+.tile .k{font-size:13px;color:var(--muted)}
+.tile .v{font-size:26px;font-weight:700;color:var(--navy);line-height:1.2;font-variant-numeric:tabular-nums}
+.tile .s{font-size:12.5px;color:var(--muted)}
+.funnel{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.fr{display:grid;grid-template-columns:120px minmax(0,1fr) 64px;gap:10px;align-items:center;font-size:14px}
+.track{height:14px;background:#F0EEEA;border-radius:4px;overflow:hidden}
+.fill{display:block;height:100%;background:var(--navy);border-radius:0 4px 4px 0;min-width:3px}
+.fr .v{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.fr .rate{grid-column:2/4;font-size:12px;color:var(--muted);margin-top:-6px}
+.top td{font-weight:600;color:var(--navy)}
+.top td:first-child::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--clay);margin-right:7px}
+.note{font-size:13px;color:var(--muted);margin:10px 0 0}
+.ai .banner{background:var(--paper);border-left:3px solid var(--clay);padding:10px 14px;font-size:14px;color:#3A3F4B;margin-bottom:14px}
+.ai p{margin:0 0 10px}
+.ai ul{margin:0 0 10px;padding-left:20px}
+.ai li{margin-bottom:4px}
+.row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+button.run{font:inherit;font-weight:600;font-size:15px;background:var(--clay);color:#fff;border:0;border-radius:999px;padding:0 22px;min-height:44px;cursor:pointer}
+button.run:hover{background:#9A6649}
+button.run:disabled{background:#C9B3A5;cursor:progress}
+.err{color:#A32D2D;font-size:14px;margin:8px 0 0}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
+details{font-size:14px}
+summary{cursor:pointer;font-weight:600;color:var(--navy)}
+.how ol{margin:8px 0 0;padding-left:20px}
+.how p{margin:8px 0 0}
+footer{font-size:12.5px;color:var(--muted);text-align:center}
+@media (max-width:860px){.layout{grid-template-columns:1fr}}
+@media (max-width:520px){.grid2,.tiles{grid-template-columns:1fr}.fr{grid-template-columns:96px minmax(0,1fr) 56px}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="brand">
+    <div class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18l-7 8v6l-4 2v-8z"/></svg></div>
+    <h1>Pipeline Planner</h1>
+    <span class="tag">Free tool</span>
+  </div>
+  <a class="gh" href="https://github.com/nazia-a11y/marketing-ai-tools" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M14 4l-4 16"/></svg>View the code on GitHub</a>
+</header>
+
+<p class="lead">Start from the revenue target and work backwards. This tool shows the leads, pipeline and marketing budget needed to hit it, which stage of the funnel matters most, and then asks Claude for a plain-English review of the plan.</p>
+
+<div class="layout">
+<section class="card" aria-labelledby="inh">
+  <h2 id="inh">Your numbers</h2>
+  <p class="sub">The figures below are an example. Replace them with your own and the results update as you type.</p>
+  <form id="f" novalidate>
+    <div class="grid2">
+      <label>Annual new revenue target<input name="target" type="number" min="1000" step="1000" value="2000000"></label>
+      <label>Currency<select name="currency"><option value="GBP">£ GBP</option><option value="USD">$ USD</option><option value="EUR">€ EUR</option></select></label>
+      <label>Average deal size<input name="deal_size" type="number" min="100" step="100" value="25000"></label>
+      <label>Share from marketing (%)<input name="marketing_share" type="number" min="1" max="100" step="1" value="60"></label>
+      <label>Sales cycle (months)<input name="cycle_months" type="number" min="1" max="36" step="1" value="4"></label>
+    </div>
+    <div class="group">
+      <h3>Conversion rates (%)</h3>
+      <div class="grid2">
+        <label>Lead to MQL<input name="lead_to_mql" type="number" min="1" max="100" step="0.5" value="30"></label>
+        <label>MQL to SQL<input name="mql_to_sql" type="number" min="1" max="100" step="0.5" value="40"></label>
+        <label>SQL to opportunity<input name="sql_to_opp" type="number" min="1" max="100" step="0.5" value="60"></label>
+        <label>Opportunity to won<input name="win_rate" type="number" min="1" max="100" step="0.5" value="25"></label>
+      </div>
+    </div>
+    <div class="group">
+      <h3>Channel mix</h3>
+      <table class="chan">
+        <thead><tr><th>Channel</th><th class="n" style="width:78px">Share %</th><th class="n" style="width:96px">Cost per lead</th></tr></thead>
+        <tbody id="chan"></tbody>
+      </table>
+      <p class="total" id="total"></p>
+    </div>
+  </form>
+</section>
+
+<div style="display:flex;flex-direction:column;gap:20px">
+<section class="card" aria-labelledby="resh">
+  <h2 id="resh">What the target needs</h2>
+  <p class="sub" id="ressub"></p>
+  <div class="tiles" id="tiles"></div>
+  <h3 style="margin-top:20px">Funnel per month</h3>
+  <div class="funnel" id="funnel"></div>
+  <p class="note" id="timing"></p>
+</section>
+
+<section class="card" aria-labelledby="wh">
+  <h2 id="wh">Where improvement pays most</h2>
+  <p class="sub">The budget saved in a year by improving one stage by 5 percentage points, with everything else unchanged.</p>
+  <table><thead><tr><th>Stage</th><th class="n">Change</th><th class="n">Budget saved</th></tr></thead><tbody id="whatif"></tbody></table>
+  <h3 style="margin-top:20px">Budget by channel</h3>
+  <table><thead><tr><th>Channel</th><th class="n">Leads a year</th><th class="n">Budget a year</th></tr></thead><tbody id="chanout"></tbody></table>
+</section>
+</div>
+</div>
+
+<section class="card ai" aria-labelledby="aih" aria-live="polite">
+  <h2 id="aih">Claude's review of the plan</h2>
+  <div id="review"></div>
+  <div class="row"><button class="run" id="run" type="button">Ask Claude to review my figures</button><span class="note" id="usage" style="margin:0">Free reviews are limited each day to keep costs down.</span></div>
+  <p class="err" id="err" role="alert" hidden></p>
+</section>
+
+<section class="card how">
+  <details>
+    <summary>How this works, and what it cannot tell you</summary>
+    <ol>
+      <li>The target is split into the revenue marketing must source, then divided by the deal size to give the deals needed.</li>
+      <li>Each conversion rate is applied in reverse to give opportunities, SQLs, MQLs and leads. The channel mix gives the average cost per lead and the budget.</li>
+      <li>All of these numbers are calculated in your browser with fixed formulas. They are never produced by AI.</li>
+      <li>Claude is only asked to review the finished figures, and is told to use nothing else. Reviews are kept for 24 hours, so asking again about the same figures is free.</li>
+    </ol>
+    <p>This is a planning model, not a forecast. It assumes the rates hold steady across the year and every lead costs the channel average. Real funnels vary by segment, season and deal size, so use it to find the constraint and test what-if scenarios, then check the result against your own CRM data.</p>
+  </details>
+</section>
+
+<footer>Built by Nazia Hossain as an applied AI project · Uses Claude by Anthropic</footer>
+</div>
+
+<script>
+const API = 'https://marketing-tools-api.nazia-ed1.workers.dev';
+const DEFAULT_CHANNELS = [
+  { name: 'LinkedIn ads', share: 35, cpl: 120 },
+  { name: 'Paid search', share: 25, cpl: 90 },
+  { name: 'Events', share: 15, cpl: 250 },
+  { name: 'Content and SEO', share: 25, cpl: 40 }
+];
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const int = (n) => Math.round(n).toLocaleString('en-GB');
+let money = (n) => n;
+let example = null;
+let lastReviewKey = null;
+
+$('#chan').innerHTML = DEFAULT_CHANNELS.map((c, i) => `<tr>
+  <td><input aria-label="Channel ${i + 1} name" data-c="name" value="${esc(c.name)}" maxlength="40"></td>
+  <td><input aria-label="Channel ${i + 1} share" data-c="share" type="number" min="0" max="100" step="1" value="${c.share}" style="text-align:right"></td>
+  <td><input aria-label="Channel ${i + 1} cost per lead" data-c="cpl" type="number" min="0" step="1" value="${c.cpl}" style="text-align:right"></td></tr>`).join('');
+
+function readInput() {
+  const f = new FormData($('#f'));
+  const v = (k) => Number(f.get(k));
+  const channels = [...$('#chan').rows].map((r) => ({
+    name: r.querySelector('[data-c=name]').value.trim(),
+    share: Number(r.querySelector('[data-c=share]').value),
+    cpl: Number(r.querySelector('[data-c=cpl]').value)
+  })).filter((c) => c.name && c.share > 0);
+  return {
+    currency: f.get('currency'), target: v('target'), deal_size: v('deal_size'), marketing_share: v('marketing_share'),
+    lead_to_mql: v('lead_to_mql'), mql_to_sql: v('mql_to_sql'), sql_to_opp: v('sql_to_opp'), win_rate: v('win_rate'),
+    cycle_months: v('cycle_months'), channels
+  };
+}
+
+function check(i) {
+  const pos = ['target', 'deal_size', 'cycle_months'];
+  const rates = ['marketing_share', 'lead_to_mql', 'mql_to_sql', 'sql_to_opp', 'win_rate'];
+  if (pos.some((k) => !(i[k] > 0))) return 'Enter a target, deal size and sales cycle above zero.';
+  if (rates.some((k) => !(i[k] >= 1 && i[k] <= 100))) return 'Each rate must be between 1 and 100.';
+  const total = i.channels.reduce((s, c) => s + c.share, 0);
+  if (Math.abs(total - 100) > 0.5) return 'The channel shares must add up to 100%.';
+  return null;
+}
+
+// Same formulas as the server, so the review always matches what is on screen.
+function maths(i) {
+  const mktRevenue = i.target * i.marketing_share / 100;
+  const won = mktRevenue / i.deal_size;
+  const opps = won / (i.win_rate / 100);
+  const sqls = opps / (i.sql_to_opp / 100);
+  const mqls = sqls / (i.mql_to_sql / 100);
+  const leads = mqls / (i.lead_to_mql / 100);
+  const cpl = i.channels.reduce((s, c) => s + (c.share / 100) * c.cpl, 0);
+  const budget = leads * cpl;
+  const stages = [['Lead to MQL', i.lead_to_mql], ['MQL to SQL', i.mql_to_sql], ['SQL to opportunity', i.sql_to_opp], ['Opportunity to won', i.win_rate]];
+  const whatIf = stages.map(([stage, rate]) => ({ stage, from: rate, to: Math.min(100, rate + 5), saving: budget * (1 - rate / Math.min(100, rate + 5)) }))
+    .sort((a, b) => b.saving - a.saving);
+  return { mktRevenue, won, opps, sqls, mqls, leads, cpl, budget, whatIf,
+    channels: i.channels.map((c) => ({ name: c.name, leads: leads * c.share / 100, budget: leads * (c.share / 100) * c.cpl })) };
+}
+
+function renderNumbers() {
+  const i = readInput();
+  money = (n) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: i.currency, maximumFractionDigits: 0 }).format(n);
+  const total = i.channels.reduce((s, c) => s + c.share, 0);
+  $('#total').textContent = `Shares add up to ${int(total)}%` + (Math.abs(total - 100) > 0.5 ? '. They need to add up to 100%.' : '.');
+  $('#total').classList.toggle('bad', Math.abs(total - 100) > 0.5);
+  const problem = check(i);
+  if (problem) {
+    $('#ressub').textContent = problem;
+    ['#tiles', '#funnel', '#whatif', '#chanout'].forEach((s) => { $(s).innerHTML = ''; });
+    $('#timing').textContent = '';
+    return null;
+  }
+  const m = maths(i);
+  $('#ressub').textContent = `To source ${money(m.mktRevenue)} of new revenue from marketing, at ${money(i.deal_size)} a deal.`;
+  const tile = (k, v, s) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+  $('#tiles').innerHTML =
+    tile('Leads needed a month', int(m.leads / 12), `${int(m.leads)} a year`) +
+    tile('Marketing budget a year', money(m.budget), `${money(m.budget / 12)} a month`) +
+    tile('Pipeline to create', money(m.opps * i.deal_size), `${int(m.opps)} opportunities a year`) +
+    tile('Marketing cost per won deal', money(m.budget / m.won), `${(m.budget / m.mktRevenue * 100).toFixed(1)}% of the revenue it sources`);
+  const rows = [['Leads', m.leads, null], ['MQLs', m.mqls, i.lead_to_mql], ['SQLs', m.sqls, i.mql_to_sql], ['Opportunities', m.opps, i.sql_to_opp], ['Won deals', m.won, i.win_rate]];
+  $('#funnel').innerHTML = rows.map(([name, n, rate]) => {
+    const per = n / 12;
+    const shown = per < 10 ? per.toFixed(1) : int(per);
+    return `<div class="fr" title="${name}: ${shown} a month, ${int(n)} a year"><span>${name}</span><span class="track"><span class="fill" style="width:${(n / m.leads) * 100}%"></span></span><span class="v">${shown}</span>` +
+      (rate ? `<span class="rate">${rate}% of the stage above</span>` : '') + '</div>';
+  }).join('');
+  const start = i.cycle_months;
+  $('#timing').textContent = `With a ${start}-month sales cycle, the leads that close in any month were generated about ${start} month${start === 1 ? '' : 's'} earlier. To hit this year's target, lead generation needs to run at this level from ${start} month${start === 1 ? '' : 's'} before the year starts.`;
+  $('#whatif').innerHTML = m.whatIf.map((w, idx) => `<tr class="${idx === 0 ? 'top' : ''}"><td>${w.stage}</td><td class="n">${w.from}% → ${w.to}%</td><td class="n">${money(w.saving)}</td></tr>`).join('');
+  $('#chanout').innerHTML = m.channels.map((c) => `<tr><td>${esc(c.name)}</td><td class="n">${int(Math.ceil(c.leads))}</td><td class="n">${money(c.budget)}</td></tr>`).join('');
+  return i;
+}
+
+function renderReview(d, isExample) {
+  const r = d.review;
+  const when = new Date(d.run_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  $('#review').innerHTML = `<div class="banner">${isExample ? 'Example review of the figures shown when the page opens. ' : ''}Written by Claude on ${when}${d.cached ? ' (saved from the last 24 hours)' : ''}.</div>
+    <p>${esc(r.summary)}</p>
+    <h3>The biggest constraint</h3><p>${esc(r.constraint)}</p>
+    <h3>Risks</h3><ul>${r.risks.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+    <h3>What to do next</h3><ul>${r.actions.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+}
+
+const keyOf = (i) => JSON.stringify(i);
+
+function refresh() {
+  const i = renderNumbers();
+  $('#err').hidden = true;
+  const k = i ? keyOf(i) : null;
+  if (k && k === lastReviewKey) return;
+  if (example && k === keyOf(example.input)) { renderReview(example, true); return; }
+  $('#review').innerHTML = `<p class="note" style="margin:0 0 14px">${i ? 'Your figures have changed. Ask Claude for a review of these numbers.' : 'Fix the figures above to ask for a review.'}</p>`;
+  lastReviewKey = null;
+}
+
+async function refreshUsage() {
+  try {
+    const u = await (await fetch(API + '/api/usage?tool=plan')).json();
+    const left = Math.min(u.remaining_for_you, u.remaining_today);
+    $('#usage').textContent = left > 0 ? `You have ${left} free review${left === 1 ? '' : 's'} left today.` : 'No free reviews left today. The numbers above still work in full.';
+  } catch { /* keep default note */ }
+}
+
+$('#f').addEventListener('input', refresh);
+$('#f').addEventListener('change', refresh);
+$('#run').addEventListener('click', async () => {
+  const i = renderNumbers();
+  const showErr = (m) => { $('#err').textContent = m; $('#err').hidden = false; };
+  if (!i) return showErr(check(readInput()));
+  if (example && keyOf(i) === keyOf(example.input)) return showErr('This is the example review. Change any figure to get a review of your own numbers.');
+  const btn = $('#run');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner" aria-hidden="true"></span>Claude is reviewing your plan…';
+  try {
+    const res = await fetch(API + '/api/plan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(i) });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || 'Something went wrong.');
+    renderReview(d, false);
+    lastReviewKey = keyOf(i);
+  } catch (x) {
+    showErr(x.message || 'The review could not be written. Please try again later.');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Ask Claude to review my figures';
+    refreshUsage();
+  }
+});
+
+refresh();
+fetch('example.json').then((r) => (r.ok ? r.json() : null)).then((d) => { if (d) { example = d; refresh(); } }).catch(() => {});
+refreshUsage();
+</script>
+</body>
+</html>
