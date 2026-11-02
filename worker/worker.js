@@ -5,11 +5,13 @@
 //   ANTHROPIC_API_KEY  secret
 //   STORE              KV namespace (cache and run counters)
 //   ALLOWED_ORIGINS    comma-separated list of pages allowed to call this API
-//   DAILY_CAP          total runs per day across all visitors (default 20)
-//   VISITOR_CAP        runs per visitor per day (default 2)
+//   DAILY_CAP          visibility check: total runs per day (default 20)
+//   VISITOR_CAP        visibility check: runs per visitor per day (default 2)
+//   PLAN_DAILY_CAP     pipeline planner: total runs per day (default 30)
+//   PLAN_VISITOR_CAP   pipeline planner: runs per visitor per day (default 5)
 //   MODEL              Claude model (default claude-haiku-5-5)
 
-const DEFAULTS = { DAILY_CAP: 20, VISITOR_CAP: 2, MODEL: 'claude-haiku-5-5' };
+const DEFAULTS = { DAILY_CAP: 20, VISITOR_CAP: 2, PLAN_DAILY_CAP: 30, PLAN_VISITOR_CAP: 5, MODEL: 'claude-haiku-5-5' };
 const CACHE_SECONDS = 24 * 60 * 60;
 
 export default {
@@ -22,13 +24,19 @@ export default {
     try {
       if (url.pathname === '/api/health') return json({ ok: true }, 200, cors);
       if (url.pathname === '/api/usage' && request.method === 'GET') {
-        return json(await usage(request, env), 200, cors);
+        return json(await usage(request, env, url.searchParams.get('tool') === 'plan' ? 'plan' : 'visibility'), 200, cors);
       }
       if (url.pathname === '/api/visibility' && request.method === 'POST') {
         if (!cors['Access-Control-Allow-Origin']) return json({ error: 'This page is not allowed to use the API.' }, 403, cors);
         const input = cleanVisibilityInput(await request.json().catch(() => ({})));
         if (input.error) return json({ error: input.error }, 400, cors);
         return json(await runLimited(request, env, 'visibility', input, () => visibility(input, env)), 200, cors);
+      }
+      if (url.pathname === '/api/plan' && request.method === 'POST') {
+        if (!cors['Access-Control-Allow-Origin']) return json({ error: 'This page is not allowed to use the API.' }, 403, cors);
+        const input = cleanPlanInput(await request.json().catch(() => ({})));
+        if (input.error) return json({ error: input.error }, 400, cors);
+        return json(await runLimited(request, env, 'plan', input, () => plan(input, env)), 200, cors);
       }
       return json({ error: 'Not found' }, 404, cors);
     } catch (e) {
@@ -71,18 +79,31 @@ async function visitorId(request) {
   return (await sha256(ip + today())).slice(0, 24);
 }
 
-function caps(env) {
+// Each tool has its own limits, so one cannot use up the other's runs.
+function caps(env, tool) {
+  if (tool === 'plan') {
+    return {
+      daily: Number(env.PLAN_DAILY_CAP || DEFAULTS.PLAN_DAILY_CAP),
+      visitor: Number(env.PLAN_VISITOR_CAP || DEFAULTS.PLAN_VISITOR_CAP)
+    };
+  }
   return {
     daily: Number(env.DAILY_CAP || DEFAULTS.DAILY_CAP),
     visitor: Number(env.VISITOR_CAP || DEFAULTS.VISITOR_CAP)
   };
 }
 
-async function usage(request, env) {
-  const c = caps(env);
-  const vid = await visitorId(request);
-  const used = Number((await env.STORE.get(`count:${today()}`)) || 0);
-  const mine = Number((await env.STORE.get(`visitor:${today()}:${vid}`)) || 0);
+// The visibility check keeps its original counter names.
+const counterKeys = (tool, vid) => {
+  const p = tool === 'visibility' ? '' : `${tool}:`;
+  return { dayKey: `count:${p}${today()}`, visKey: `visitor:${p}${today()}:${vid}` };
+};
+
+async function usage(request, env, tool) {
+  const c = caps(env, tool);
+  const { dayKey, visKey } = counterKeys(tool, await visitorId(request));
+  const used = Number((await env.STORE.get(dayKey)) || 0);
+  const mine = Number((await env.STORE.get(visKey)) || 0);
   return { remaining_today: Math.max(0, c.daily - used), remaining_for_you: Math.max(0, c.visitor - mine) };
 }
 
@@ -92,10 +113,8 @@ async function runLimited(request, env, tool, input, work) {
   const cached = await env.STORE.get(key, 'json');
   if (cached) return { ...cached, cached: true };
 
-  const c = caps(env);
-  const vid = await visitorId(request);
-  const dayKey = `count:${today()}`;
-  const visKey = `visitor:${today()}:${vid}`;
+  const c = caps(env, tool);
+  const { dayKey, visKey } = counterKeys(tool, await visitorId(request));
   const used = Number((await env.STORE.get(dayKey)) || 0);
   const mine = Number((await env.STORE.get(visKey)) || 0);
   if (used >= c.daily) throw fail(429, 'Today\'s free runs have all been used. Please try again tomorrow, or look at the example result.');
@@ -307,5 +326,104 @@ async function visibility(input, env) {
   };
 }
 
+
+// ---------- tool 2: pipeline planner ----------
+// The numbers are calculated here with fixed formulas. Claude only explains them.
+
+const CURRENCIES = ['GBP', 'USD', 'EUR'];
+const num = (v, min, max) => {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= min && n <= max ? n : null;
+};
+
+function cleanPlanInput(raw) {
+  const fields = {
+    target: [1000, 1e10], deal_size: [100, 1e8], marketing_share: [1, 100],
+    lead_to_mql: [1, 100], mql_to_sql: [1, 100], sql_to_opp: [1, 100], win_rate: [1, 100], cycle_months: [1, 36]
+  };
+  const out = { currency: CURRENCIES.includes(raw.currency) ? raw.currency : 'GBP' };
+  for (const [k, [min, max]] of Object.entries(fields)) {
+    const n = num(raw[k], min, max);
+    if (n === null) return { error: 'Please check the numbers. Each one must be a positive figure, and rates must be between 1 and 100.' };
+    out[k] = n;
+  }
+  const channels = (Array.isArray(raw.channels) ? raw.channels : []).slice(0, 6).map((c) => ({
+    name: clip(c && c.name, 40), share: num(c && c.share, 0, 100), cpl: num(c && c.cpl, 0, 1e6)
+  })).filter((c) => c.name && c.share !== null && c.cpl !== null && c.share > 0);
+  const total = channels.reduce((s, c) => s + c.share, 0);
+  if (!channels.length || Math.abs(total - 100) > 0.5) return { error: 'The channel shares must add up to 100%.' };
+  out.channels = channels;
+  return out;
+}
+
+function planMaths(i) {
+  const r = (x) => Math.round(x);
+  const mktRevenue = i.target * (i.marketing_share / 100);
+  const won = mktRevenue / i.deal_size;
+  const opps = won / (i.win_rate / 100);
+  const sqls = opps / (i.sql_to_opp / 100);
+  const mqls = sqls / (i.mql_to_sql / 100);
+  const leads = mqls / (i.lead_to_mql / 100);
+  const cpl = i.channels.reduce((s, c) => s + (c.share / 100) * c.cpl, 0);
+  const budget = leads * cpl;
+  const stages = [
+    { key: 'lead_to_mql', label: 'Lead to MQL', rate: i.lead_to_mql },
+    { key: 'mql_to_sql', label: 'MQL to SQL', rate: i.mql_to_sql },
+    { key: 'sql_to_opp', label: 'SQL to opportunity', rate: i.sql_to_opp },
+    { key: 'win_rate', label: 'Opportunity to won', rate: i.win_rate }
+  ];
+  // What a 5-point improvement at each stage would save, all else equal.
+  const whatIf = stages.map((s) => {
+    const better = Math.min(100, s.rate + 5);
+    const saving = budget * (1 - s.rate / better);
+    return { stage: s.label, from: s.rate, to: better, budget_saving: r(saving) };
+  }).sort((a, b) => b.budget_saving - a.budget_saving);
+  return {
+    annual: { marketing_revenue: r(mktRevenue), won: Math.ceil(won), opportunities: Math.ceil(opps), sqls: Math.ceil(sqls), mqls: Math.ceil(mqls), leads: Math.ceil(leads) },
+    monthly: { won: +(won / 12).toFixed(1), opportunities: r(opps / 12), sqls: r(sqls / 12), mqls: r(mqls / 12), leads: r(leads / 12) },
+    blended_cpl: r(cpl),
+    budget: r(budget),
+    budget_per_month: r(budget / 12),
+    cost_per_won: r(budget / won),
+    budget_to_revenue_pct: +((budget / mktRevenue) * 100).toFixed(1),
+    pipeline_needed: r(opps * i.deal_size),
+    lead_to_won_pct: +((won / leads) * 100).toFixed(2),
+    weakest_stage: stages.slice().sort((a, b) => a.rate - b.rate)[0].label,
+    what_if: whatIf,
+    channel_budget: i.channels.map((c) => ({ name: c.name, leads: Math.ceil(leads * c.share / 100), budget: r(leads * (c.share / 100) * c.cpl) }))
+  };
+}
+
+async function plan(input, env) {
+  const maths = planMaths(input);
+  const facts = JSON.stringify({ inputs: input, results: maths });
+  const msg = await claude(env, {
+    max_tokens: 1500,
+    messages: [{
+      role: 'user',
+      content: `You are a B2B marketing operations lead reviewing a pipeline plan. All figures below were calculated with fixed formulas. Use only these figures and do not invent benchmarks or statistics. Currency is ${input.currency}.
+
+${facts}
+
+Write a short review in British English, without contractions, in plain words a CEO would understand. Reply only with JSON in this form:
+{"summary": "two sentences on what the plan needs", "constraint": "one or two sentences on the single biggest constraint, using the what_if figures", "risks": ["risk", "risk"], "actions": ["action", "action", "action"]}`
+    }]
+  });
+  let review = null;
+  try {
+    const t = (textOf(msg).match(/\{[\s\S]*\}/) || ['{}'])[0];
+    const j = JSON.parse(t);
+    const s = (x, n) => clip(x, n);
+    review = {
+      summary: s(j.summary, 500),
+      constraint: s(j.constraint, 500),
+      risks: (Array.isArray(j.risks) ? j.risks : []).map((x) => s(x, 300)).filter(Boolean).slice(0, 3),
+      actions: (Array.isArray(j.actions) ? j.actions : []).map((x) => s(x, 300)).filter(Boolean).slice(0, 4)
+    };
+  } catch { /* handled below */ }
+  if (!review || !review.summary) throw fail(502, 'The AI review could not be written. Please try again.');
+  return { tool: 'plan', input, model: env.MODEL || DEFAULTS.MODEL, results: maths, review };
+}
+
 // Exported for local tests.
-export const _test = { placeName, cleanVisibilityInput, questionsFor, scoreAnswers, firstIndex, namePattern, sentenceAround, domainsOf };
+export const _test = { planMaths, cleanPlanInput, placeName, cleanVisibilityInput, questionsFor, scoreAnswers, firstIndex, namePattern, sentenceAround, domainsOf };
