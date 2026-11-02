@@ -12,6 +12,16 @@ Buyers now ask AI assistants which providers to shortlist, and most marketing te
 - Brand names are counted with simple rules, so the numbers can be checked. AI is only used to spot other brands the answers mention.
 - The page says plainly what the check cannot do: AI answers vary by person, settings and model version, so this is an estimate and a trend, not what any one buyer sees.
 
+## Pipeline Planner
+
+**[Try it →](https://nazmh-pipeline-planner.static.hf.space)**
+
+Marketing plans often start from a budget rather than from the revenue the business needs. This tool works backwards from a revenue target to the leads, opportunities, pipeline and budget required, then asks Claude for a plain-English review.
+
+- Every number is calculated with fixed formulas, in the browser and again on the server. AI never produces a figure.
+- A what-if table shows the budget saved by improving each funnel stage by five points, so the real constraint is clear.
+- Claude reviews the finished figures only: a summary, the biggest constraint, the risks and the next steps. One short call per review, with no web search, so each costs a fraction of a penny.
+
 ## How it is built
 
 ```mermaid
@@ -21,7 +31,7 @@ flowchart LR
     B --> D[Saved results and run counts<br/>Cloudflare KV]
 ```
 
-**One shared server for every tool.** The Worker holds the API key as an encrypted secret, so it never reaches the browser. It only accepts requests from the tool pages, limits each visitor to two runs a day and all visitors to 20, and saves results for 24 hours so a repeat check is free. A failed run does not use up anyone's allowance.
+**One shared server for every tool.** The Worker holds the API key as an encrypted secret, so it never reaches the browser. It only accepts requests from the tool pages, gives each tool its own daily limits (for the visibility check, two runs per visitor and 20 in total), and saves results for 24 hours so a repeat check is free. A failed run does not use up anyone's allowance.
 
 **Rules first, AI second.** Counting and scoring are done with plain code. The model is used where it adds something, and is told to work only from the facts it is given.
 
@@ -29,7 +39,8 @@ flowchart LR
 
 | Path | Purpose |
 | --- | --- |
-| `worker/worker.js` | The shared Cloudflare Worker: limits, cache, API calls and the visibility logic |
+| `worker/worker.js` | The shared Cloudflare Worker: limits, cache, API calls and the logic for each tool |
 | `visibility/index.html` | The AI Search Visibility Check page |
+| `planner/index.html` | The Pipeline Planner page |
 
 Built by Nazia Hossain. See also [In-Market Signals](https://github.com/nazia-a11y/in-market-signals).
