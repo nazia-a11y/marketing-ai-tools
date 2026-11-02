@@ -177,7 +177,7 @@ function cleanVisibilityInput(raw) {
   const competitors = (Array.isArray(raw.competitors) ? raw.competitors : [])
     .map((c) => clip(c, 60)).filter(Boolean).slice(0, 4);
   if (brand.length < 2) return { error: 'Enter your brand name.' };
-  if (category.length < 3) return { error: 'Enter the category you sell in, for example "colocation provider".' };
+  if (category.length < 3) return { error: 'Enter the category you sell in, for example "CRM platform".' };
   return { brand, category, country, competitors };
 }
 
