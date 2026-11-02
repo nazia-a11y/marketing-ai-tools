@@ -88,7 +88,7 @@ async function usage(request, env) {
 
 // Cached results are free and do not count against any limit.
 async function runLimited(request, env, tool, input, work) {
-  const key = `cache:${tool}:${await sha256(JSON.stringify(input))}`;
+  const key = `cache:${tool}:v2:${await sha256(JSON.stringify(input))}`;
   const cached = await env.STORE.get(key, 'json');
   if (cached) return { ...cached, cached: true };
 
@@ -223,7 +223,7 @@ function scoreAnswers(answers, names, brand) {
 
 async function ask(env, question, country, web) {
   const body = {
-    max_tokens: 700,
+    max_tokens: 1600,
     messages: [{ role: 'user', content: question }]
   };
   if (web) {
@@ -249,16 +249,16 @@ function countryCode(c) {
 }
 
 async function discoverBrands(env, answers, known, category) {
-  const corpus = answers.map((a) => a.text).join('\n---\n').slice(0, 12000);
+  const corpus = answers.map((a) => a.text).join('\n---\n').slice(0, 8000);
   const msg = await claude(env, {
-    max_tokens: 400,
+    max_tokens: 3000,
     messages: [{
       role: 'user',
       content: `Below are several AI answers about ${category}s.\n\n${corpus}\n\nList every company or brand named in these answers as a ${category}, except these: ${known.join(', ') || 'none'}. Use the names exactly as written. Reply only with JSON: {"brands": ["..."]}`
     }]
   });
   try {
-    const t = textOf(msg).replace(/^```(json)?|```$/g, '').trim();
+    const t = (textOf(msg).match(/\{[\s\S]*\}/) || ['{}'])[0];
     const list = JSON.parse(t).brands;
     return Array.isArray(list) ? [...new Set(list.map((b) => clip(b, 60)).filter(Boolean))].slice(0, 12) : [];
   } catch {
