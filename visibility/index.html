@@ -43,7 +43,7 @@ button.run:disabled{background:#C9B3A5;cursor:progress}
 .hero .n{font-size:40px;font-weight:700;color:var(--navy);line-height:1}
 .hero .t{font-size:14px;color:var(--muted)}
 .rows{display:flex;flex-direction:column;gap:9px}
-.r{display:grid;grid-template-columns:132px minmax(0,1fr) 64px;align-items:center;gap:10px;font-size:14px}
+.r{display:grid;grid-template-columns:172px minmax(0,1fr) 56px;align-items:center;gap:10px;font-size:14px}
 .r .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .r.you .nm{font-weight:700;color:var(--navy)}
 .track{height:12px;background:#F0EEEA;border-radius:4px;overflow:hidden}
@@ -63,7 +63,7 @@ summary{cursor:pointer;font-weight:600;color:var(--navy)}
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:8px}
 @keyframes sp{to{transform:rotate(360deg)}}
 footer{font-size:12.5px;color:var(--muted);text-align:center}
-@media (max-width:760px){form,.cols{grid-template-columns:1fr}.comps{grid-template-columns:repeat(2,minmax(0,1fr))}.r{grid-template-columns:100px minmax(0,1fr) 56px}}
+@media (max-width:760px){form,.cols{grid-template-columns:1fr}.comps{grid-template-columns:repeat(2,minmax(0,1fr))}.r{grid-template-columns:128px minmax(0,1fr) 48px}}
 @media (prefers-reduced-motion:reduce){.spinner{animation:none}}
 </style>
 </head>
@@ -118,7 +118,6 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
 
 <script>
 const API = 'https://marketing-tools-api.nazia-ed1.workers.dev';
-const EXAMPLE = null; // filled with a real saved run after deployment
 
 const place = (c) => (c === 'Global' ? 'all markets' : ['United Kingdom', 'United States', 'Netherlands'].includes(c) ? `the ${c}` : c);
 const $ = (s) => document.querySelector(s);
@@ -136,7 +135,7 @@ function bars(mode) {
 function panel(title, sub, mode, you, extra) {
   const me = mode.rows.find((r) => r.is_you) || { mention_rate: 0, mentions: 0, avg_position: null };
   const quotes = mode.quotes.length
-    ? '<ul class="quotes">' + mode.quotes.map((q) => `<li><span class="q">${esc(q.question)}</span>“${esc(q.text)}”</li>`).join('') + '</ul>'
+    ? '<ul class="quotes">' + mode.quotes.map((q) => `<li><span class="q">${esc(q.question)}</span>“${esc(q.text.replace(/^[-–•*]\s*/, ''))}”</li>`).join('') + '</ul>'
     : `<p class="empty">None of these answers named ${esc(you)}.</p>`;
   return `<section class="card"><h3>${title}</h3><p class="sub">${sub}</p>
     <div class="hero"><span class="n">${me.mention_rate}%</span><span class="t">${esc(you)} was named in ${me.mentions || 0} of ${mode.answers} answers${me.avg_position ? ` · average position ${me.avg_position}` : ''}</span></div>
@@ -196,7 +195,7 @@ $('#f').addEventListener('submit', async (e) => {
   }
 });
 
-if (EXAMPLE) render(EXAMPLE, true);
+fetch('example.json').then((r) => (r.ok ? r.json() : null)).then((d) => { if (d && !$('#results').innerHTML) render(d, true); }).catch(() => {});
 refreshUsage();
 </script>
 </body>
