@@ -104,7 +104,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
   <details>
     <summary>How this works, and what it cannot tell you</summary>
     <ol>
-      <li>Five buyer questions are built from your category and country, for example "What are the best colocation providers in the United Kingdom?"</li>
+      <li>Five buyer questions are built from your category and country, for example "What are the best CRM platforms in the United Kingdom?"</li>
       <li>Each question is asked three times with no web access, to show what the model already knows, and once with live web search, to show what it finds today.</li>
       <li>Brand names are counted with simple rules. AI is used only to spot other brands the answers name, so new competitors appear.</li>
       <li>Results are kept for 24 hours, so running the same check again is free.</li>
@@ -178,7 +178,7 @@ $('#f').addEventListener('submit', async (e) => {
   };
   const err = (m) => { $('#err').textContent = m; $('#err').hidden = false; };
   if (body.brand.length < 2) return err('Enter your brand name.');
-  if (body.category.length < 3) return err('Enter the category you sell in, for example "colocation provider".');
+  if (body.category.length < 3) return err('Enter the category you sell in, for example "CRM platform".');
   const btn = $('#run');
   btn.disabled = true; btn.innerHTML = '<span class="spinner" aria-hidden="true"></span>Asking 20 questions…';
   try {
