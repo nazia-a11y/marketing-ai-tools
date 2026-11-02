@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Search Visibility Check</title>
+<meta name="description" content="See how often AI assistants name your brand when buyers ask about your category, compared with your competitors.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{--navy:#1C2B4A;--blue:#3E5A8A;--clay:#B07A5A;--clay-soft:#F3E9E2;--line:#E8E2DA;--paper:#F8F6F2;--ink:#1F2430;--muted:#6B6B6B;--bar:#CBC6BE;--bg:#F6F5F2}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:Inter,system-ui,sans-serif;color:var(--ink);font-size:15px;line-height:1.55}
+a{color:var(--blue)}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 16px 56px;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{width:36px;height:36px;border-radius:10px;background:var(--navy);display:flex;align-items:center;justify-content:center}
+h1{margin:0;font-size:22px;font-weight:700;color:var(--navy);letter-spacing:-.01em}
+.tag{font-size:12px;font-weight:500;color:#4B5563;background:#E9EBEF;border-radius:999px;padding:3px 10px}
+.gh{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 16px;border-radius:999px;background:var(--navy);color:#fff;font-size:14px;font-weight:600;text-decoration:none}
+.gh:hover{background:var(--clay);color:#fff}
+.lead{margin:0;color:#3A3F4B;max-width:760px;font-size:16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px}
+h2{margin:0 0 4px;font-size:18px;color:var(--navy)}
+h3{margin:0 0 10px;font-size:15px;color:var(--navy)}
+.sub{margin:0 0 14px;color:var(--muted);font-size:14px}
+form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+label{display:flex;flex-direction:column;gap:6px;font-size:13.5px;font-weight:600;color:#374151}
+input,select{font:inherit;font-size:15px;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;background:#fff;color:var(--ink);min-height:42px}
+input:focus,select:focus{outline:2px solid var(--blue);outline-offset:1px;border-color:var(--blue)}
+.full{grid-column:1/-1}
+.comps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.actions{grid-column:1/-1;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+button.run{font:inherit;font-weight:600;font-size:15px;background:var(--clay);color:#fff;border:0;border-radius:999px;padding:0 22px;min-height:44px;cursor:pointer}
+button.run:hover{background:#9A6649}
+button.run:disabled{background:#C9B3A5;cursor:progress}
+.note{font-size:13px;color:var(--muted)}
+.err{grid-column:1/-1;color:#A32D2D;font-size:14px;margin:0}
+.banner{background:var(--paper);border-left:3px solid var(--clay);padding:10px 14px;font-size:14px;color:#3A3F4B}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.hero{display:flex;align-items:baseline;gap:10px;margin:6px 0 14px}
+.hero .n{font-size:40px;font-weight:700;color:var(--navy);line-height:1}
+.hero .t{font-size:14px;color:var(--muted)}
+.rows{display:flex;flex-direction:column;gap:9px}
+.r{display:grid;grid-template-columns:132px minmax(0,1fr) 64px;align-items:center;gap:10px;font-size:14px}
+.r .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.r.you .nm{font-weight:700;color:var(--navy)}
+.track{height:12px;background:#F0EEEA;border-radius:4px;overflow:hidden}
+.fill{display:block;height:100%;background:var(--bar);border-radius:0 4px 4px 0}
+.r.you .fill{background:var(--clay)}
+.r .v{text-align:right;font-variant-numeric:tabular-nums;color:#374151}
+.legend{font-size:12.5px;color:var(--muted);margin-top:10px}
+.quotes{margin:16px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+.quotes li{background:var(--paper);border-radius:8px;padding:10px 12px;font-size:14px}
+.quotes .q{display:block;font-size:12.5px;color:var(--muted);margin-bottom:3px}
+.empty{font-size:14px;color:var(--muted);background:var(--paper);border-radius:8px;padding:10px 12px;margin-top:14px}
+.src{margin:14px 0 0;padding-left:18px;font-size:13.5px}
+details{font-size:14px}
+summary{cursor:pointer;font-weight:600;color:var(--navy)}
+.how ol{margin:8px 0 0;padding-left:20px}
+.how p{margin:8px 0 0}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
+footer{font-size:12.5px;color:var(--muted);text-align:center}
+@media (max-width:760px){form,.cols{grid-template-columns:1fr}.comps{grid-template-columns:repeat(2,minmax(0,1fr))}.r{grid-template-columns:100px minmax(0,1fr) 56px}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="brand">
+    <div class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+    <h1>AI Search Visibility Check</h1>
+    <span class="tag">Free tool</span>
+  </div>
+  <a class="gh" href="https://github.com/nazia-a11y/marketing-ai-tools" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M14 4l-4 16"/></svg>View the code on GitHub</a>
+</header>
+
+<p class="lead">Buyers now ask AI assistants which providers to shortlist. This tool asks Claude five typical buyer questions about your category and shows how often your brand is named, compared with your competitors.</p>
+
+<section class="card" aria-labelledby="formh">
+  <h2 id="formh">Run a check</h2>
+  <p class="sub">It takes about a minute. Each run asks 20 questions in total.</p>
+  <form id="f" novalidate>
+    <label>Your brand<input name="brand" required maxlength="60" placeholder="DataVita" autocomplete="off"></label>
+    <label>Your category<input name="category" required maxlength="80" placeholder="colocation provider" autocomplete="off"></label>
+    <label>Country<select name="country">
+      <option>United Kingdom</option><option>Ireland</option><option>United States</option><option>Germany</option><option>France</option><option>Netherlands</option><option>Australia</option><option>Canada</option><option>Global</option>
+    </select></label>
+    <div></div>
+    <div class="full"><label style="margin-bottom:6px">Competitors (up to four, optional)</label>
+      <div class="comps"><input name="c1" maxlength="60" placeholder="Competitor 1" aria-label="Competitor 1" autocomplete="off"><input name="c2" maxlength="60" placeholder="Competitor 2" aria-label="Competitor 2" autocomplete="off"><input name="c3" maxlength="60" placeholder="Competitor 3" aria-label="Competitor 3" autocomplete="off"><input name="c4" maxlength="60" placeholder="Competitor 4" aria-label="Competitor 4" autocomplete="off"></div>
+    </div>
+    <p class="err" id="err" role="alert" hidden></p>
+    <div class="actions"><button class="run" id="run" type="submit">Run the check</button><span class="note" id="usage">Free runs are limited each day to keep costs down.</span></div>
+  </form>
+</section>
+
+<div id="results" aria-live="polite"></div>
+
+<section class="card how">
+  <details>
+    <summary>How this works, and what it cannot tell you</summary>
+    <ol>
+      <li>Five buyer questions are built from your category and country, for example "What are the best colocation providers in the United Kingdom?"</li>
+      <li>Each question is asked three times with no web access, to show what the model already knows, and once with live web search, to show what it finds today.</li>
+      <li>Brand names are counted with simple rules. AI is used only to spot other brands the answers name, so new competitors appear.</li>
+      <li>Results are kept for 24 hours, so running the same check again is free.</li>
+    </ol>
+    <p>Answers in ChatGPT, Claude or Gemini change from person to person, with their history, settings, location and the model version, and can differ each time. This check asks neutral questions with no personal context, so treat it as an estimate and a trend to watch, not what any one buyer sees.</p>
+  </details>
+</section>
+
+<footer>Built by Nazia Hossain as an applied AI project · Uses Claude by Anthropic</footer>
+</div>
+
+<script>
+const API = 'https://marketing-tools-api.nazia-ed1.workers.dev';
+const EXAMPLE = null; // filled with a real saved run after deployment
+
+const place = (c) => (c === 'Global' ? 'all markets' : ['United Kingdom', 'United States', 'Netherlands'].includes(c) ? `the ${c}` : c);
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function bars(mode) {
+  const max = Math.max(1, ...mode.rows.map((r) => r.mention_rate));
+  return '<div class="rows">' + mode.rows.map((r) =>
+    `<div class="r${r.is_you ? ' you' : ''}" title="${esc(r.name)}: named in ${r.mentions} of ${mode.answers} answers${r.avg_position ? `, average position ${r.avg_position}` : ''}">
+      <span class="nm">${esc(r.name)}${r.is_you ? ' (you)' : ''}</span>
+      <span class="track"><span class="fill" style="width:${(r.mention_rate / max) * 100}%"></span></span>
+      <span class="v">${r.mention_rate}%</span></div>`).join('') + '</div>';
+}
+
+function panel(title, sub, mode, you, extra) {
+  const me = mode.rows.find((r) => r.is_you) || { mention_rate: 0, mentions: 0, avg_position: null };
+  const quotes = mode.quotes.length
+    ? '<ul class="quotes">' + mode.quotes.map((q) => `<li><span class="q">${esc(q.question)}</span>“${esc(q.text)}”</li>`).join('') + '</ul>'
+    : `<p class="empty">None of these answers named ${esc(you)}.</p>`;
+  return `<section class="card"><h3>${title}</h3><p class="sub">${sub}</p>
+    <div class="hero"><span class="n">${me.mention_rate}%</span><span class="t">${esc(you)} was named in ${me.mentions || 0} of ${mode.answers} answers${me.avg_position ? ` · average position ${me.avg_position}` : ''}</span></div>
+    ${bars(mode)}
+    <p class="legend">Share of answers that named each brand. Hover a bar for the count and average position in the answer.</p>
+    ${quotes}${extra || ''}</section>`;
+}
+
+function render(d, isExample) {
+  const you = d.input.brand;
+  const web = d.modes.live_web;
+  const sources = web.sources && web.sources.length
+    ? '<h3 style="margin-top:16px">Sites live search relied on</h3><ul class="src">' + web.sources.map((s) => `<li>${esc(s.domain)} (${s.times})</li>`).join('') + '</ul>' : '';
+  const when = new Date(d.run_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  $('#results').innerHTML = `
+    <div class="banner">${isExample ? 'Example result. ' : ''}${esc(you)} as a ${esc(d.input.category)} in ${esc(place(d.input.country))}${d.input.competitors.length ? `, compared with ${esc(d.input.competitors.join(', '))}` : ''}. Checked ${when}${d.cached ? ' (saved result from the last 24 hours)' : ''}.</div>
+    <div class="cols" style="margin-top:16px">
+      ${panel('What the model knows', 'Claude with no web access, three answers per question', d.modes.model_knowledge, you)}
+      ${panel('What live search finds', 'Claude with web search, one answer per question', web, you, sources)}
+    </div>
+    <section class="card" style="margin-top:16px"><details><summary>The ${d.questions.length} questions asked</summary><ol>${d.questions.map((q) => `<li>${esc(q)}</li>`).join('')}</ol></details></section>`;
+}
+
+async function refreshUsage() {
+  try {
+    const u = await (await fetch(API + '/api/usage')).json();
+    $('#usage').textContent = u.remaining_for_you > 0 && u.remaining_today > 0
+      ? `You have ${Math.min(u.remaining_for_you, u.remaining_today)} free run${Math.min(u.remaining_for_you, u.remaining_today) === 1 ? '' : 's'} left today.`
+      : 'No free runs left today. The example result below still shows how it works.';
+  } catch { /* keep default note */ }
+}
+
+$('#f').addEventListener('input', () => { $('#err').hidden = true; });
+$('#f').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const body = {
+    brand: f.get('brand').trim(), category: f.get('category').trim(), country: f.get('country'),
+    competitors: ['c1', 'c2', 'c3', 'c4'].map((k) => f.get(k).trim()).filter(Boolean)
+  };
+  const err = (m) => { $('#err').textContent = m; $('#err').hidden = false; };
+  if (body.brand.length < 2) return err('Enter your brand name.');
+  if (body.category.length < 3) return err('Enter the category you sell in, for example "colocation provider".');
+  const btn = $('#run');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner" aria-hidden="true"></span>Asking 20 questions…';
+  try {
+    const res = await fetch(API + '/api/visibility', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || 'Something went wrong.');
+    render(d, false);
+    $('#results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (x) {
+    err(x.message || 'The check could not run. Please try again later.');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Run the check';
+    refreshUsage();
+  }
+});
+
+if (EXAMPLE) render(EXAMPLE, true);
+refreshUsage();
+</script>
+</body>
+</html>
