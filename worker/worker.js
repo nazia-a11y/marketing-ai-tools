@@ -336,15 +336,31 @@ const num = (v, min, max) => {
   return Number.isFinite(n) && n >= min && n <= max ? n : null;
 };
 
+// Two ways to describe the funnel: every stage, or just the basics.
+const PLAN_STAGES = {
+  detailed: [
+    { key: 'lead_to_mql', label: 'Lead to MQL' },
+    { key: 'mql_to_sql', label: 'MQL to SQL' },
+    { key: 'sql_to_opp', label: 'SQL to opportunity' },
+    { key: 'win_rate', label: 'Opportunity to won' }
+  ],
+  simple: [
+    { key: 'lead_to_opp', label: 'Lead to opportunity' },
+    { key: 'win_rate', label: 'Opportunity to won' }
+  ]
+};
+
 function cleanPlanInput(raw) {
-  const fields = {
-    target: [1000, 1e10], deal_size: [100, 1e8], marketing_share: [1, 100],
-    lead_to_mql: [1, 100], mql_to_sql: [1, 100], sql_to_opp: [1, 100], win_rate: [1, 100], cycle_months: [1, 36]
-  };
+  const mode = raw.mode === 'simple' ? 'simple' : 'detailed';
+  const bad = { error: 'Please check the numbers. Each one must be a positive figure, and rates must be between 0.1 and 100.' };
+  // The detailed input keeps its original shape, so saved results still match.
   const out = { currency: CURRENCIES.includes(raw.currency) ? raw.currency : 'GBP' };
-  for (const [k, [min, max]] of Object.entries(fields)) {
+  if (mode === 'simple') out.mode = 'simple';
+  const fields = [['target', 1000, 1e10], ['deal_size', 100, 1e8], ['marketing_share', 1, 100],
+    ...PLAN_STAGES[mode].map((s) => [s.key, 0.1, 100]), ['cycle_months', 1, 36]];
+  for (const [k, min, max] of fields) {
     const n = num(raw[k], min, max);
-    if (n === null) return { error: 'Please check the numbers. Each one must be a positive figure, and rates must be between 1 and 100.' };
+    if (n === null) return bad;
     out[k] = n;
   }
   const channels = (Array.isArray(raw.channels) ? raw.channels : []).slice(0, 6).map((c) => ({
@@ -356,31 +372,34 @@ function cleanPlanInput(raw) {
   return out;
 }
 
+// Improve a rate by 5 points, or by 1 point when it is under 10%.
+const stepFor = (rate) => (rate < 10 ? 1 : 5);
+
 function planMaths(i) {
   const r = (x) => Math.round(x);
+  const stages = PLAN_STAGES[i.mode === 'simple' ? 'simple' : 'detailed'].map((s) => ({ ...s, rate: i[s.key] }));
   const mktRevenue = i.target * (i.marketing_share / 100);
   const won = mktRevenue / i.deal_size;
-  const opps = won / (i.win_rate / 100);
-  const sqls = opps / (i.sql_to_opp / 100);
-  const mqls = sqls / (i.mql_to_sql / 100);
-  const leads = mqls / (i.lead_to_mql / 100);
+  // Work back up the funnel from won deals to leads.
+  const counts = [won];
+  for (let k = stages.length - 1; k >= 0; k--) counts.unshift(counts[0] / (stages[k].rate / 100));
+  const leads = counts[0];
+  const opps = counts[counts.length - 2];
   const cpl = i.channels.reduce((s, c) => s + (c.share / 100) * c.cpl, 0);
   const budget = leads * cpl;
-  const stages = [
-    { key: 'lead_to_mql', label: 'Lead to MQL', rate: i.lead_to_mql },
-    { key: 'mql_to_sql', label: 'MQL to SQL', rate: i.mql_to_sql },
-    { key: 'sql_to_opp', label: 'SQL to opportunity', rate: i.sql_to_opp },
-    { key: 'win_rate', label: 'Opportunity to won', rate: i.win_rate }
-  ];
-  // What a 5-point improvement at each stage would save, all else equal.
   const whatIf = stages.map((s) => {
-    const better = Math.min(100, s.rate + 5);
+    const better = Math.min(100, s.rate + stepFor(s.rate));
     const saving = budget * (1 - s.rate / better);
     return { stage: s.label, from: s.rate, to: better, budget_saving: r(saving) };
   }).sort((a, b) => b.budget_saving - a.budget_saving);
+  const names = i.mode === 'simple' ? ['leads', 'opportunities', 'won'] : ['leads', 'mqls', 'sqls', 'opportunities', 'won'];
+  const annual = { marketing_revenue: r(mktRevenue) };
+  const monthly = {};
+  names.forEach((n, k) => { annual[n] = Math.ceil(counts[k]); monthly[n] = n === 'won' ? +(counts[k] / 12).toFixed(1) : r(counts[k] / 12); });
   return {
-    annual: { marketing_revenue: r(mktRevenue), won: Math.ceil(won), opportunities: Math.ceil(opps), sqls: Math.ceil(sqls), mqls: Math.ceil(mqls), leads: Math.ceil(leads) },
-    monthly: { won: +(won / 12).toFixed(1), opportunities: r(opps / 12), sqls: r(sqls / 12), mqls: r(mqls / 12), leads: r(leads / 12) },
+    funnel_detail: i.mode === 'simple' ? 'basics only: lead to opportunity and win rate' : 'every stage',
+    annual,
+    monthly,
     blended_cpl: r(cpl),
     budget: r(budget),
     budget_per_month: r(budget / 12),
@@ -394,14 +413,24 @@ function planMaths(i) {
   };
 }
 
+// Read the first complete JSON object in a reply, ignoring any text around it.
+function parseJsonLoose(text) {
+  const start = text.indexOf('{');
+  if (start < 0) throw new Error('no JSON');
+  for (let end = text.lastIndexOf('}'); end > start; end = text.lastIndexOf('}', end - 1)) {
+    try { return JSON.parse(text.slice(start, end + 1)); } catch { /* try a shorter slice */ }
+  }
+  throw new Error('no JSON');
+}
+
 async function plan(input, env) {
   const maths = planMaths(input);
   const facts = JSON.stringify({ inputs: input, results: maths });
   const msg = await claude(env, {
-    max_tokens: 1500,
+    max_tokens: 3000,
     messages: [{
       role: 'user',
-      content: `You are a B2B marketing operations lead reviewing a pipeline plan. All figures below were calculated with fixed formulas. Use only these figures and do not invent benchmarks or statistics. Currency is ${input.currency}.
+      content: `You are a B2B marketing operations lead reviewing a pipeline plan. All figures below were calculated with fixed formulas. Use only these figures and do not invent benchmarks or statistics. If the funnel_detail is basics only, do not comment on stages that were not given; you may suggest tracking them. Currency is ${input.currency}.
 
 ${facts}
 
@@ -410,9 +439,9 @@ Write a short review in British English, without contractions, in plain words a 
     }]
   });
   let review = null;
+  const text = textOf(msg);
   try {
-    const t = (textOf(msg).match(/\{[\s\S]*\}/) || ['{}'])[0];
-    const j = JSON.parse(t);
+    const j = parseJsonLoose(text);
     const s = (x, n) => clip(x, n);
     review = {
       summary: s(j.summary, 500),
@@ -421,7 +450,10 @@ Write a short review in British English, without contractions, in plain words a 
       actions: (Array.isArray(j.actions) ? j.actions : []).map((x) => s(x, 300)).filter(Boolean).slice(0, 4)
     };
   } catch { /* handled below */ }
-  if (!review || !review.summary) throw fail(502, 'The AI review could not be written. Please try again.');
+  if (!review || !review.summary) {
+    console.log('Plan review unreadable', msg.stop_reason, text.slice(0, 300));
+    throw fail(502, 'The AI review could not be written. Please try again.');
+  }
   return { tool: 'plan', input, model: env.MODEL || DEFAULTS.MODEL, results: maths, review };
 }
 
