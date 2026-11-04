@@ -9,9 +9,11 @@
 //   VISITOR_CAP        visibility check: runs per visitor per day (default 2)
 //   PLAN_DAILY_CAP     pipeline planner: total runs per day (default 30)
 //   PLAN_VISITOR_CAP   pipeline planner: runs per visitor per day (default 5)
+//   REF_DAILY_CAP      referral calculator: total runs per day (default 30)
+//   REF_VISITOR_CAP    referral calculator: runs per visitor per day (default 5)
 //   MODEL              Claude model (default claude-haiku-5-5)
 
-const DEFAULTS = { DAILY_CAP: 20, VISITOR_CAP: 2, PLAN_DAILY_CAP: 30, PLAN_VISITOR_CAP: 5, MODEL: 'claude-haiku-5-5' };
+const DEFAULTS = { DAILY_CAP: 20, VISITOR_CAP: 2, PLAN_DAILY_CAP: 30, PLAN_VISITOR_CAP: 5, REF_DAILY_CAP: 30, REF_VISITOR_CAP: 5, MODEL: 'claude-haiku-5-5' };
 const CACHE_SECONDS = 24 * 60 * 60;
 
 export default {
@@ -24,7 +26,8 @@ export default {
     try {
       if (url.pathname === '/api/health') return json({ ok: true }, 200, cors);
       if (url.pathname === '/api/usage' && request.method === 'GET') {
-        return json(await usage(request, env, url.searchParams.get('tool') === 'plan' ? 'plan' : 'visibility'), 200, cors);
+        const t = url.searchParams.get('tool');
+        return json(await usage(request, env, t === 'plan' || t === 'referral' ? t : 'visibility'), 200, cors);
       }
       if (url.pathname === '/api/visibility' && request.method === 'POST') {
         if (!cors['Access-Control-Allow-Origin']) return json({ error: 'This page is not allowed to use the API.' }, 403, cors);
@@ -37,6 +40,12 @@ export default {
         const input = cleanPlanInput(await request.json().catch(() => ({})));
         if (input.error) return json({ error: input.error }, 400, cors);
         return json(await runLimited(request, env, 'plan', input, () => plan(input, env)), 200, cors);
+      }
+      if (url.pathname === '/api/referral' && request.method === 'POST') {
+        if (!cors['Access-Control-Allow-Origin']) return json({ error: 'This page is not allowed to use the API.' }, 403, cors);
+        const input = cleanReferralInput(await request.json().catch(() => ({})));
+        if (input.error) return json({ error: input.error }, 400, cors);
+        return json(await runLimited(request, env, 'referral', input, () => referral(input, env)), 200, cors);
       }
       return json({ error: 'Not found' }, 404, cors);
     } catch (e) {
@@ -81,6 +90,12 @@ async function visitorId(request) {
 
 // Each tool has its own limits, so one cannot use up the other's runs.
 function caps(env, tool) {
+  if (tool === 'referral') {
+    return {
+      daily: Number(env.REF_DAILY_CAP || DEFAULTS.REF_DAILY_CAP),
+      visitor: Number(env.REF_VISITOR_CAP || DEFAULTS.REF_VISITOR_CAP)
+    };
+  }
   if (tool === 'plan') {
     return {
       daily: Number(env.PLAN_DAILY_CAP || DEFAULTS.PLAN_DAILY_CAP),
@@ -457,5 +472,159 @@ Write a short review in British English, without contractions, in plain words a 
   return { tool: 'plan', input, model: env.MODEL || DEFAULTS.MODEL, results: maths, review };
 }
 
+// ---------- referral revenue calculator ----------
+
+// Referral Revenue Calculator: the formulas, shared word for word by the page and the server.
+// Presets come from published benchmarks (see the page for sources). Cautious uses the low end.
+const REF_PRESETS = {
+  cautious: { refer: 2, signup: 5, convert: 5, uplift: 0, churn_cut: 0 },
+  typical: { refer: 5, signup: 15, convert: 8, uplift: 25, churn_cut: 18 },
+  strong: { refer: 10, signup: 25, convert: 12, uplift: 50, churn_cut: 18 }
+};
+const REF_RAMP_MONTHS = 6;   // the programme builds to full strength over six months
+const REF_SALES_LAG = 3;     // sales-led deals close about three months after sign-up
+const REF_MAX_LIFE = 10;     // cap customer lifetime at ten years
+
+// Improve a rate by 5 points, or by 1 point when it is under 10%.
+const refStep = (rate) => (rate < 10 ? 1 : 5);
+
+function refRates(i) {
+  const p = REF_PRESETS[i.preset] || REF_PRESETS.typical;
+  const convert = i.motion === 'sales_led' ? Math.min(100, i.win_rate * (1 + p.uplift / 100)) : p.convert;
+  return { refer: p.refer, signup: p.signup, convert, churn_cut: p.churn_cut, uplift: p.uplift };
+}
+
+// Run twelve months. Referred customers join the base and can refer others too.
+function refRun(i, rates) {
+  const lag = i.motion === 'sales_led' ? REF_SALES_LAG : 0;
+  const closing = new Array(12 + lag).fill(0);
+  let won = 0;
+  let referrers = 0;
+  let signups = 0;
+  const monthly = [];
+  for (let m = 1; m <= 12; m++) {
+    const ramp = Math.min(1, m / REF_RAMP_MONTHS);
+    const r = (i.customers + won) * (rates.refer / 100) * ramp;
+    const s = r * (rates.signup / 100);
+    referrers += r;
+    signups += s;
+    closing[m - 1 + lag] += s * (rates.convert / 100);
+    won += closing[m - 1];
+    monthly.push(+closing[m - 1].toFixed(2));
+  }
+  const later = closing.slice(12).reduce((a, b) => a + b, 0);
+  return { referrers, signups, won, later, monthly };
+}
+
+function refMaths(i) {
+  const r0 = (x) => Math.round(x);
+  const r1 = (x) => Math.round(x * 10) / 10;
+  const rates = refRates(i);
+  const run = refRun(i, rates);
+  const n = run.won;
+  const rewardCost = n * i.reward;
+  const runningCost = 12 * i.monthly_cost;
+  const totalCost = rewardCost + runningCost;
+  const costPer = n > 0 ? totalCost / n : null;
+  const life = (churn) => Math.min(REF_MAX_LIFE, 100 / Math.max(churn, 0.1));
+  const lifeNormal = life(i.churn);
+  const lifeReferred = life(i.churn * (1 - rates.churn_cut / 100));
+
+  // What-if: improve one lever at a time and see the extra customers in a year.
+  const levers = [
+    ['refer', 'Customers who refer each month'],
+    ['signup', 'Referred people who sign up'],
+    i.motion === 'sales_led' ? ['win_rate', 'Your win rate'] : ['convert', 'Sign-ups who become paying']
+  ];
+  const whatIf = levers.map(([key, label]) => {
+    const from = key === 'win_rate' ? i.win_rate : rates[key];
+    const to = Math.min(100, from + refStep(from));
+    let better;
+    if (key === 'win_rate') better = { ...rates, convert: Math.min(100, to * (1 + rates.uplift / 100)) };
+    else better = { ...rates, [key]: to };
+    const extra = refRun(i, better).won - n;
+    return { lever: label, from, to, extra_customers: r1(extra), extra_arr: r0(extra * i.acv) };
+  }).sort((a, b) => b.extra_arr - a.extra_arr);
+
+  const warnings = [];
+  if (n < 1) warnings.push('At these numbers, referrals would bring in fewer than one new customer in a year.');
+  if (i.reward > i.acv * 0.2) warnings.push('The reward is more than 20% of a customer\'s first-year value, which is above the usual range of 5% to 20%.');
+  if (i.reward >= i.paid_cac) warnings.push('The reward costs as much as winning a customer through paid channels, so it removes most of the saving.');
+  if (costPer !== null && costPer >= i.paid_cac) warnings.push('Once running costs are included, referrals cost more per customer than paid channels at these numbers.');
+
+  return {
+    rates: { refer: rates.refer, signup: rates.signup, convert: r1(rates.convert), churn_cut: rates.churn_cut },
+    referrers: r0(run.referrers),
+    signups: r1(run.signups),
+    new_customers: r1(n),
+    still_in_pipeline: r1(run.later),
+    arr_added: r0(n * i.acv),
+    share_of_base_pct: r1((n / i.customers) * 100),
+    reward_cost: r0(rewardCost),
+    running_cost: r0(runningCost),
+    total_cost: r0(totalCost),
+    cost_per_customer: costPer === null ? null : r0(costPer),
+    paid_cost_same_customers: r0(n * i.paid_cac),
+    saving_vs_paid: r0(n * i.paid_cac - totalCost),
+    payback_months: costPer === null ? null : r1(costPer / (i.acv / 12)),
+    reward_pct_of_acv: r1((i.reward / i.acv) * 100),
+    lifetime_years_normal: r1(lifeNormal),
+    lifetime_years_referred: r1(lifeReferred),
+    lifetime_value_normal: r0(i.acv * lifeNormal),
+    lifetime_value_referred: r0(i.acv * lifeReferred),
+    monthly_new_customers: run.monthly,
+    what_if: whatIf,
+    warnings
+  };
+}
+
+function cleanReferralInput(raw) {
+  const motion = raw.motion === 'sales_led' ? 'sales_led' : 'self_serve';
+  const preset = ['cautious', 'typical', 'strong'].includes(raw.preset) ? raw.preset : 'typical';
+  const out = { currency: CURRENCIES.includes(raw.currency) ? raw.currency : 'GBP', motion, preset };
+  const fields = [['customers', 10, 1e7], ['acv', 50, 1e8], ['paid_cac', 1, 1e8], ['reward', 0, 1e8], ['monthly_cost', 0, 1e8], ['churn', 1, 90]];
+  if (motion === 'sales_led') fields.push(['win_rate', 0.1, 100]);
+  for (const [k, min, max] of fields) {
+    const n = num(raw[k], min, max);
+    if (n === null) return { error: 'Please check the numbers. Each one must be a positive figure within a sensible range.' };
+    out[k] = n;
+  }
+  return out;
+}
+
+async function referral(input, env) {
+  const maths = refMaths(input);
+  const facts = JSON.stringify({ inputs: input, results: maths });
+  const msg = await claude(env, {
+    max_tokens: 3000,
+    messages: [{
+      role: 'user',
+      content: `You are a B2B SaaS growth lead advising whether a customer referral programme is worth running. All figures below were calculated with fixed formulas from the user's inputs and ${input.preset} benchmark assumptions. Use only these figures and do not invent benchmarks or statistics. Be honest: if the numbers are small or the programme costs more than paid channels, say so plainly and explain what would need to change. Currency is ${input.currency}.
+
+${facts}
+
+Write a short review in British English, without contractions, in plain words a founder would understand. Reply only with JSON in this form:
+{"summary": "two sentences on whether a referral programme looks worth testing and why", "lever": "one or two sentences on the number that matters most, using the what_if figures", "risks": ["risk", "risk"], "actions": ["action", "action", "action"]}`
+    }]
+  });
+  let review = null;
+  const text = textOf(msg);
+  try {
+    const j = parseJsonLoose(text);
+    const s = (x, n) => clip(x, n);
+    review = {
+      summary: s(j.summary, 500),
+      lever: s(j.lever, 500),
+      risks: (Array.isArray(j.risks) ? j.risks : []).map((x) => s(x, 300)).filter(Boolean).slice(0, 3),
+      actions: (Array.isArray(j.actions) ? j.actions : []).map((x) => s(x, 300)).filter(Boolean).slice(0, 4)
+    };
+  } catch { /* handled below */ }
+  if (!review || !review.summary) {
+    console.log('Referral review unreadable', msg.stop_reason, text.slice(0, 300));
+    throw fail(502, 'The AI review could not be written. Please try again.');
+  }
+  return { tool: 'referral', input, model: env.MODEL || DEFAULTS.MODEL, results: maths, review };
+}
+
 // Exported for local tests.
-export const _test = { planMaths, cleanPlanInput, placeName, cleanVisibilityInput, questionsFor, scoreAnswers, firstIndex, namePattern, sentenceAround, domainsOf };
+export const _test = { refMaths, cleanReferralInput, planMaths, cleanPlanInput, placeName, cleanVisibilityInput, questionsFor, scoreAnswers, firstIndex, namePattern, sentenceAround, domainsOf };
