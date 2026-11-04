@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Referral Revenue Calculator</title>
+<meta name="description" content="See what a customer referral programme could add to a B2B software company in a year, what it would cost, and how it compares with paid channels, then get a plain-English review from Claude.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{--navy:#1C2B4A;--blue:#3E5A8A;--clay:#B07A5A;--line:#E8E2DA;--paper:#F8F6F2;--ink:#1F2430;--muted:#6B6B6B;--bg:#F6F5F2}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:Inter,system-ui,sans-serif;color:var(--ink);font-size:15px;line-height:1.55}
+a{color:var(--blue)}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 16px 56px;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{width:36px;height:36px;border-radius:10px;background:var(--navy);display:flex;align-items:center;justify-content:center}
+h1{margin:0;font-size:22px;font-weight:700;color:var(--navy);letter-spacing:-.01em}
+.tag{font-size:12px;font-weight:500;color:#4B5563;background:#E9EBEF;border-radius:999px;padding:3px 10px}
+.gh{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 16px;border-radius:999px;background:var(--navy);color:#fff;font-size:14px;font-weight:600;text-decoration:none}
+.gh:hover{background:var(--clay);color:#fff}
+.lead{margin:0;color:#3A3F4B;max-width:760px;font-size:16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px}
+h2{margin:0 0 4px;font-size:18px;color:var(--navy)}
+h3{margin:0 0 10px;font-size:15px;color:var(--navy)}
+.sub{margin:0 0 14px;color:var(--muted);font-size:14px}
+.layout{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:20px;align-items:start}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;color:#374151}
+input,select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #D1D5DB;border-radius:8px;background:#fff;color:var(--ink);min-height:40px;width:100%}
+input:focus,select:focus{outline:2px solid var(--blue);outline-offset:1px;border-color:var(--blue)}
+.group{margin-top:18px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12.5px;font-weight:600;color:var(--muted);padding:0 6px 6px 0}
+td{padding:4px 6px 4px 0;vertical-align:middle}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.tile{background:var(--paper);border-radius:10px;padding:12px 14px}
+.tile .k{font-size:13px;color:var(--muted)}
+.tile .v{font-size:26px;font-weight:700;color:var(--navy);line-height:1.2;font-variant-numeric:tabular-nums}
+.tile .s{font-size:12.5px;color:var(--muted)}
+.top td{font-weight:600;color:var(--navy)}
+.top td:first-child::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--clay);margin-right:7px}
+.note{font-size:13px;color:var(--muted);margin:10px 0 0}
+.warn{background:#FBF3EE;border-left:3px solid var(--clay);padding:8px 12px;font-size:13.5px;color:#5A3A28;margin:10px 0 0;border-radius:0 8px 8px 0}
+.ai .banner{background:var(--paper);border-left:3px solid var(--clay);padding:10px 14px;font-size:14px;color:#3A3F4B;margin-bottom:14px}
+.ai p{margin:0 0 10px}
+.ai ul{margin:0 0 10px;padding-left:20px}
+.ai li{margin-bottom:4px}
+.row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+button.run{font:inherit;font-weight:600;font-size:15px;background:var(--clay);color:#fff;border:0;border-radius:999px;padding:0 22px;min-height:44px;cursor:pointer}
+button.run:hover{background:#9A6649}
+button.run:disabled{background:#C9B3A5;cursor:progress}
+.err{color:#A32D2D;font-size:14px;margin:8px 0 0}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
+details{font-size:14px}
+summary{cursor:pointer;font-weight:600;color:var(--navy)}
+.how ol{margin:8px 0 0;padding-left:20px}
+.how p{margin:8px 0 0}
+.how li{margin-bottom:4px}
+footer{font-size:12.5px;color:var(--muted);text-align:center}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0;padding:0;list-style:none}
+.steps li{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;color:#3A3F4B;display:flex;gap:10px;align-items:flex-start}
+.steps .num{flex:none;width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.steps b{display:block;color:var(--navy)}
+.hint{font-size:12.5px;font-weight:400;color:var(--muted);line-height:1.4}
+.sect{display:flex;align-items:center;gap:8px;margin:0 0 10px}
+.sect .num{width:22px;height:22px;border-radius:50%;background:var(--clay);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+.sect h3{margin:0}
+.seg{display:inline-flex;border:1px solid #D1D5DB;border-radius:999px;padding:3px;gap:3px;margin:0 0 6px;flex-wrap:wrap}
+.seg button{font:inherit;font-size:13.5px;font-weight:600;border:0;background:transparent;color:#374151;border-radius:999px;padding:6px 14px;cursor:pointer;min-height:34px}
+.seg button[aria-pressed=true]{background:var(--navy);color:#fff}
+.fun{display:flex;flex-direction:column;align-items:stretch;margin-top:4px}
+.stage{background:var(--navy);color:#fff;border-radius:8px;padding:7px 12px;font-size:14px;font-weight:600;margin:0 auto;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.stage b{font-variant-numeric:tabular-nums}
+.move{display:flex;align-items:center;justify-content:center;gap:8px;padding:5px 0;font-size:13px;color:#374151}
+.bars{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px;align-items:end;height:120px;margin-top:6px;border-bottom:1px solid var(--line)}
+.bars span{display:block;background:var(--navy);border-radius:4px 4px 0 0;min-height:2px}
+.bars span:hover{background:var(--clay)}
+.axis{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px;font-size:11.5px;color:var(--muted);text-align:center;margin-top:4px}
+.presets{font-size:13px;color:#374151;margin:8px 0 0;background:var(--paper);border-radius:10px;padding:10px 14px}
+.presets div{display:flex;justify-content:space-between;gap:10px;padding:2px 0}
+.presets b{font-variant-numeric:tabular-nums;color:var(--navy)}
+.src{font-size:12.5px;color:var(--muted);margin:8px 0 0}
+[hidden]{display:none!important}
+@media (max-width:860px){.layout{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:700px){.steps{grid-template-columns:1fr}}
+@media (max-width:520px){.seg{display:grid;grid-template-columns:1fr 1fr;border-radius:12px;width:100%}.seg.three{grid-template-columns:1fr 1fr 1fr}.seg button{border-radius:9px;font-size:13px;padding:6px 8px}.grid2,.tiles{grid-template-columns:1fr}.wi .c3{display:none}.wi th.n{white-space:normal}.axis{font-size:10px}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="brand">
+    <div class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="16" r="3"/><path d="M10.5 10.5l4 3.5"/><path d="M3 20c.8-3 2.6-5 5-5"/></svg></div>
+    <h1>Referral Revenue Calculator</h1>
+    <span class="tag">Free tool</span>
+  </div>
+  <a class="gh" href="https://github.com/nazia-a11y/marketing-ai-tools/tree/main/referral" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M14 4l-4 16"/></svg>View the code on GitHub</a>
+</header>
+
+<p class="lead">Is a customer referral programme worth it? Enter a few numbers you already know. This tool shows how many new customers referrals could bring in over a year, what they would cost, and how that compares with paid channels, then asks Claude for a plain-English review.</p>
+
+<ol class="steps" aria-label="How to use it">
+  <li><span class="num">1</span><span><b>Describe your business</b>How many customers you have, what one is worth, and what paid channels cost you to win one.</span></li>
+  <li><span class="num">2</span><span><b>Set up the programme</b>How you sell, the reward you would offer, and how cautious the assumptions should be.</span></li>
+  <li><span class="num">3</span><span><b>Read the results</b>See the likely return and the lever that matters most, then ask Claude to review it.</span></li>
+</ol>
+
+<div class="layout">
+<section class="card" aria-labelledby="inh">
+  <h2 id="inh">Your numbers</h2>
+  <p class="sub">The figures are an example to show how it works. Replace any of them and the results update as you type.</p>
+  <form id="f" novalidate>
+    <div class="sect"><span class="num">1</span><h3>Your business</h3></div>
+    <div class="grid2">
+      <label>Paying customers today<input name="customers" type="number" min="10" step="10" value="3000"><span class="hint">Active paying accounts, not individual users.</span></label>
+      <label>Currency<select name="currency"><option value="GBP">£ GBP</option><option value="USD">$ USD</option><option value="EUR">€ EUR</option></select></label>
+      <label>Average value of a customer a year<input name="acv" type="number" min="50" step="50" value="3600"><span class="hint">What a typical customer pays in a year.</span></label>
+      <label>Cost to win a customer through paid channels<input name="paid_cac" type="number" min="1" step="50" value="2400"><span class="hint">Ad and campaign spend divided by the customers it brought in.</span></label>
+      <label>Customers lost each year (%)<input name="churn" type="number" min="1" max="90" step="1" value="12"><span class="hint">The share who cancel in a typical year.</span></label>
+    </div>
+
+    <div class="group">
+      <div class="sect"><span class="num">2</span><h3>How you sell</h3></div>
+      <div class="seg" role="group" aria-label="How do customers buy?">
+        <button type="button" data-motion="self_serve" aria-pressed="true">They sign up themselves</button>
+        <button type="button" data-motion="sales_led" aria-pressed="false">Through a sales team</button>
+      </div>
+      <p class="hint" id="motionhint" style="margin:0">A free trial or free plan, then customers upgrade on their own.</p>
+      <label id="winwrap" style="margin-top:10px" hidden>Your win rate today (%)<input name="win_rate" type="number" min="0.1" max="100" step="any" value="20"><span class="hint">Of every 100 people who book a demo or speak to sales, how many become customers?</span></label>
+    </div>
+
+    <div class="group">
+      <div class="sect"><span class="num">3</span><h3>The programme</h3></div>
+      <div class="grid2">
+        <label>Reward for each new customer<input name="reward" type="number" min="0" step="10" value="360"><span class="hint">Paid only when a referral becomes a customer. Include any discount for the new customer.</span></label>
+        <label>Running cost a month<input name="monthly_cost" type="number" min="0" step="10" value="400"><span class="hint">Referral software and admin time. Use 0 if you have none.</span></label>
+      </div>
+      <p class="hint" style="margin:14px 0 6px;font-weight:600;color:#374151;font-size:13px">How cautious should the assumptions be?</p>
+      <div class="seg three" role="group" aria-label="Assumptions">
+        <button type="button" data-preset="cautious" aria-pressed="false">Cautious</button>
+        <button type="button" data-preset="typical" aria-pressed="true">Typical</button>
+        <button type="button" data-preset="strong" aria-pressed="false">Strong</button>
+      </div>
+      <div class="presets" id="presets"></div>
+      <p class="src">Based on published benchmarks, mostly from companies that sell referral software, so Cautious uses the low end. Sources are listed under "How this works" below.</p>
+    </div>
+  </form>
+</section>
+
+<div style="display:flex;flex-direction:column;gap:20px">
+<section class="card" aria-labelledby="resh">
+  <h2 id="resh">What referrals could add in 12 months</h2>
+  <p class="sub" id="ressub"></p>
+  <div class="tiles" id="tiles"></div>
+  <div id="warns"></div>
+  <h3 style="margin-top:20px">How referrals turn into customers over the year</h3>
+  <div class="fun" id="flow"></div>
+  <h3 style="margin-top:20px">Total new customers from referrals, month by month</h3>
+  <div class="bars" id="bars" role="img" aria-label="Running total of new customers from referrals each month"></div>
+  <div class="axis" id="axis"></div>
+  <p class="note" id="rampnote"></p>
+</section>
+
+<section class="card" aria-labelledby="wh">
+  <h2 id="wh">Where improvement pays most</h2>
+  <p class="sub">The extra annual revenue from improving one number by 5 percentage points (1 point for rates under 10%), with everything else unchanged.</p>
+  <table class="wi"><thead><tr><th>Number</th><th class="n">Change</th><th class="n c3">Extra customers</th><th class="n">Extra revenue a year</th></tr></thead><tbody id="whatif"></tbody></table>
+  <p class="note" id="lifenote"></p>
+</section>
+</div>
+</div>
+
+<section class="card ai" aria-labelledby="aih" aria-live="polite">
+  <h2 id="aih">Claude's review</h2>
+  <div id="review"></div>
+  <div class="row"><button class="run" id="run" type="button">Ask Claude to review my figures</button><span class="note" id="usage" style="margin:0">Free reviews are limited each day to keep costs down.</span></div>
+  <p class="err" id="err" role="alert" hidden></p>
+</section>
+
+<section class="card how">
+  <details>
+    <summary>How this works, and what it cannot tell you</summary>
+    <ol>
+      <li>Each month, a share of your customers refer someone. The tool assumes each one refers one person, which is cautious, since a shared link often reaches more.</li>
+      <li>A share of the people referred sign up, and a share of those become paying customers. If you sell through a sales team, it uses your own win rate, raised a little for referred leads, and assumes deals close about three months after sign-up.</li>
+      <li>The programme starts small and builds to full strength over six months. New referred customers join your customer base and can refer others too.</li>
+      <li>Cost per customer is the rewards paid plus the running cost, divided by the new customers. This is compared with what paid channels cost you to win the same number of customers.</li>
+      <li>All numbers are calculated in your browser with fixed formulas. They are never produced by AI. Claude is only asked to review the finished figures, and reviews are kept for 24 hours, so asking again about the same figures is free.</li>
+    </ol>
+    <p><b>Where the assumptions come from.</b> Customers who refer each month: 2% to 5% early on, 10% to 15% for mature programmes (Cello customer data, 2026). Referred people who sign up: 15% to 25% when the invitation sits inside the product, under 5% when something is broken (Cello platform data). Referred free users who become paying: 8% to 12% (ProfitWell, quoted by GrowSurf). Referred customers cancel about 18% less often (Schmitt, Skiera and Van den Bulte, Journal of Marketing, 2011, a study of bank customers). Typical rewards: 5% to 20% of first-year value (Cello and Impact.com, quoted by GrowSurf). The uplift for referred sales leads is an assumption, as no reliable published figure exists.</p>
+    <p>This is a planning estimate, not a forecast. Results depend heavily on where the invitation appears, how much customers like the product and how easy it is to share. Use it to judge whether a programme is worth testing and which number to focus on, then measure the real rates once it is running.</p>
+    <p>Sources: <a href="https://cello.so/blog/referral-programs-sales-led-saas/" target="_blank" rel="noopener">Cello on sales-led referral programmes</a>, <a href="https://cello.so/blog/how-to-fix-referral-program-converting-under-3-percent/" target="_blank" rel="noopener">Cello on referral conversion</a>, <a href="https://growsurf.com/statistics/saas-referral-statistics/" target="_blank" rel="noopener">GrowSurf SaaS referral statistics</a>, <a href="https://faculty.wharton.upenn.edu/wp-content/uploads/2012/04/Schmitt-Skiera-vandenBulte-2011-Referral-Programs-Customer-Value.pdf" target="_blank" rel="noopener">Schmitt, Skiera and Van den Bulte (2011)</a>.</p>
+  </details>
+</section>
+
+<footer>Built by <a href="https://www.linkedin.com/in/naziamh/" target="_blank" rel="noopener" title="Nazia Hossain on LinkedIn">Nazia Hossain</a> as an applied AI project, using Claude by Anthropic.</footer>
+</div>
+
+<script>
+// Referral Revenue Calculator: the formulas, shared word for word by the page and the server.
+// Presets come from published benchmarks (see the page for sources). Cautious uses the low end.
+const REF_PRESETS = {
+  cautious: { refer: 2, signup: 5, convert: 5, uplift: 0, churn_cut: 0 },
+  typical: { refer: 5, signup: 15, convert: 8, uplift: 25, churn_cut: 18 },
+  strong: { refer: 10, signup: 25, convert: 12, uplift: 50, churn_cut: 18 }
+};
+const REF_RAMP_MONTHS = 6;   // the programme builds to full strength over six months
+const REF_SALES_LAG = 3;     // sales-led deals close about three months after sign-up
+const REF_MAX_LIFE = 10;     // cap customer lifetime at ten years
+
+// Improve a rate by 5 points, or by 1 point when it is under 10%.
+const refStep = (rate) => (rate < 10 ? 1 : 5);
+
+function refRates(i) {
+  const p = REF_PRESETS[i.preset] || REF_PRESETS.typical;
+  const convert = i.motion === 'sales_led' ? Math.min(100, i.win_rate * (1 + p.uplift / 100)) : p.convert;
+  return { refer: p.refer, signup: p.signup, convert, churn_cut: p.churn_cut, uplift: p.uplift };
+}
+
+// Run twelve months. Referred customers join the base and can refer others too.
+function refRun(i, rates) {
+  const lag = i.motion === 'sales_led' ? REF_SALES_LAG : 0;
+  const closing = new Array(12 + lag).fill(0);
+  let won = 0;
+  let referrers = 0;
+  let signups = 0;
+  const monthly = [];
+  for (let m = 1; m <= 12; m++) {
+    const ramp = Math.min(1, m / REF_RAMP_MONTHS);
+    const r = (i.customers + won) * (rates.refer / 100) * ramp;
+    const s = r * (rates.signup / 100);
+    referrers += r;
+    signups += s;
+    closing[m - 1 + lag] += s * (rates.convert / 100);
+    won += closing[m - 1];
+    monthly.push(+closing[m - 1].toFixed(2));
+  }
+  const later = closing.slice(12).reduce((a, b) => a + b, 0);
+  return { referrers, signups, won, later, monthly };
+}
+
+function refMaths(i) {
+  const r0 = (x) => Math.round(x);
+  const r1 = (x) => Math.round(x * 10) / 10;
+  const rates = refRates(i);
+  const run = refRun(i, rates);
+  const n = run.won;
+  const rewardCost = n * i.reward;
+  const runningCost = 12 * i.monthly_cost;
+  const totalCost = rewardCost + runningCost;
+  const costPer = n > 0 ? totalCost / n : null;
+  const life = (churn) => Math.min(REF_MAX_LIFE, 100 / Math.max(churn, 0.1));
+  const lifeNormal = life(i.churn);
+  const lifeReferred = life(i.churn * (1 - rates.churn_cut / 100));
+
+  // What-if: improve one lever at a time and see the extra customers in a year.
+  const levers = [
+    ['refer', 'Customers who refer each month'],
+    ['signup', 'Referred people who sign up'],
+    i.motion === 'sales_led' ? ['win_rate', 'Your win rate'] : ['convert', 'Sign-ups who become paying']
+  ];
+  const whatIf = levers.map(([key, label]) => {
+    const from = key === 'win_rate' ? i.win_rate : rates[key];
+    const to = Math.min(100, from + refStep(from));
+    let better;
+    if (key === 'win_rate') better = { ...rates, convert: Math.min(100, to * (1 + rates.uplift / 100)) };
+    else better = { ...rates, [key]: to };
+    const extra = refRun(i, better).won - n;
+    return { lever: label, from, to, extra_customers: r1(extra), extra_arr: r0(extra * i.acv) };
+  }).sort((a, b) => b.extra_arr - a.extra_arr);
+
+  const warnings = [];
+  if (n < 1) warnings.push('At these numbers, referrals would bring in fewer than one new customer in a year.');
+  if (i.reward > i.acv * 0.2) warnings.push('The reward is more than 20% of a customer\'s first-year value, which is above the usual range of 5% to 20%.');
+  if (i.reward >= i.paid_cac) warnings.push('The reward costs as much as winning a customer through paid channels, so it removes most of the saving.');
+  if (costPer !== null && costPer >= i.paid_cac) warnings.push('Once running costs are included, referrals cost more per customer than paid channels at these numbers.');
+
+  return {
+    rates: { refer: rates.refer, signup: rates.signup, convert: r1(rates.convert), churn_cut: rates.churn_cut },
+    referrers: r0(run.referrers),
+    signups: r1(run.signups),
+    new_customers: r1(n),
+    still_in_pipeline: r1(run.later),
+    arr_added: r0(n * i.acv),
+    share_of_base_pct: r1((n / i.customers) * 100),
+    reward_cost: r0(rewardCost),
+    running_cost: r0(runningCost),
+    total_cost: r0(totalCost),
+    cost_per_customer: costPer === null ? null : r0(costPer),
+    paid_cost_same_customers: r0(n * i.paid_cac),
+    saving_vs_paid: r0(n * i.paid_cac - totalCost),
+    payback_months: costPer === null ? null : r1(costPer / (i.acv / 12)),
+    reward_pct_of_acv: r1((i.reward / i.acv) * 100),
+    lifetime_years_normal: r1(lifeNormal),
+    lifetime_years_referred: r1(lifeReferred),
+    lifetime_value_normal: r0(i.acv * lifeNormal),
+    lifetime_value_referred: r0(i.acv * lifeReferred),
+    monthly_new_customers: run.monthly,
+    what_if: whatIf,
+    warnings
+  };
+}
+
+const API = 'https://marketing-tools-api.nazia-ed1.workers.dev';
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const int = (n) => Math.round(n).toLocaleString('en-GB');
+const one = (n) => (n < 10 ? (Math.round(n * 10) / 10).toLocaleString('en-GB') : int(n));
+const pct = (n) => `${+(+n).toFixed(1)}%`;
+let money = (n) => n;
+let example = null;
+let lastReviewKey = null;
+let motion = 'self_serve';
+let preset = 'typical';
+
+function readInput() {
+  const f = new FormData($('#f'));
+  const v = (k) => Number(f.get(k));
+  // Key order matches the server, so saved reviews are found again.
+  const i = { currency: f.get('currency'), motion, preset, customers: v('customers'), acv: v('acv'), paid_cac: v('paid_cac'),
+    reward: v('reward'), monthly_cost: v('monthly_cost'), churn: v('churn') };
+  if (motion === 'sales_led') i.win_rate = v('win_rate');
+  return i;
+}
+
+function check(i) {
+  if (!(i.customers >= 10)) return 'Enter at least 10 paying customers.';
+  if (!(i.acv >= 50)) return 'Enter the average value of a customer a year (at least 50).';
+  if (!(i.paid_cac >= 1)) return 'Enter what paid channels cost you to win a customer.';
+  if (!(i.reward >= 0) || !(i.monthly_cost >= 0)) return 'The reward and running cost cannot be negative.';
+  if (!(i.churn >= 1 && i.churn <= 90)) return 'Customers lost each year must be between 1% and 90%.';
+  if (i.motion === 'sales_led' && !(i.win_rate >= 0.1 && i.win_rate <= 100)) return 'Your win rate must be between 0.1% and 100%.';
+  return null;
+}
+
+function renderPresets() {
+  const p = REF_PRESETS[preset];
+  const conv = motion === 'sales_led'
+    ? ['Referred leads compared with your win rate', p.uplift ? `${p.uplift}% better` : 'the same']
+    : ['Sign-ups who become paying', `${p.convert}%`];
+  const rows = [['Customers who refer each month, at full strength', `${p.refer}%`], ['Referred people who sign up', `${p.signup}%`], conv,
+    ['Referred customers cancel less often', p.churn_cut ? `${p.churn_cut}% less` : 'not assumed']];
+  $('#presets').innerHTML = rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
+}
+
+function renderNumbers() {
+  renderPresets();
+  const i = readInput();
+  money = (n) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: i.currency, maximumFractionDigits: 0 }).format(n);
+  const problem = check(i);
+  if (problem) {
+    $('#ressub').textContent = problem;
+    ['#tiles', '#warns', '#flow', '#bars', '#axis', '#whatif'].forEach((s) => { $(s).innerHTML = ''; });
+    $('#rampnote').textContent = ''; $('#lifenote').textContent = '';
+    return null;
+  }
+  const m = refMaths(i);
+  $('#ressub').textContent = `From ${int(i.customers)} customers, at ${money(i.acv)} a year each, with ${preset} assumptions.`;
+  const tile = (k, v, s) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+  const saving = m.saving_vs_paid;
+  $('#tiles').innerHTML =
+    tile('New customers from referrals', one(m.new_customers), `${pct(m.share_of_base_pct)} growth on today's base`) +
+    tile('Annual revenue added', money(m.arr_added), 'From the new referred customers') +
+    tile('Cost per new customer', m.cost_per_customer === null ? 'None yet' : money(m.cost_per_customer), `Against ${money(i.paid_cac)} through paid channels`) +
+    tile(saving >= 0 ? 'Saving against paid channels' : 'Extra cost against paid channels', money(Math.abs(saving)),
+      m.payback_months === null ? `Programme cost ${money(m.total_cost)}` : `Programme cost ${money(m.total_cost)}, paid back in ${one(m.payback_months)} months`);
+  $('#warns').innerHTML = m.warnings.map((w) => `<p class="warn">${esc(w)}</p>`).join('');
+  const conv = `${pct(m.rates.convert)} become paying${i.motion === 'sales_led' ? ', about three months later' : ''}`;
+  const arrow = (t) => `<div class="move"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B07A5A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg>${t}</div>`;
+  const box = (label, v, w) => `<div class="stage" style="width:${w}%">${label}<b>${v}</b></div>`;
+  $('#flow').innerHTML = box('Referrals made by customers', int(m.referrers), 100) + arrow(`${pct(m.rates.signup)} sign up`) +
+    box('People who sign up', one(m.signups), 84) + arrow(conv) + box('New paying customers', one(m.new_customers), 68);
+  let run = 0;
+  const totals = m.monthly_new_customers.map((x) => (run += x));
+  const max = Math.max(...totals, 0.0001);
+  $('#bars').innerHTML = totals.map((t, k) => `<span style="height:${(t / max) * 100}%" title="Month ${k + 1}: ${one(t)} customers in total"></span>`).join('');
+  $('#axis').innerHTML = totals.map((_, k) => `<span>${k + 1}</span>`).join('');
+  $('#rampnote').textContent = `Month 1 to 12. The programme builds to full strength over six months${i.motion === 'sales_led' ? ', and referred deals take about three months to close, so ' + one(m.still_in_pipeline) + ' more customers are still in the pipeline at the end of the year' : ''}.`;
+  $('#whatif').innerHTML = m.what_if.map((w, idx) => `<tr class="${idx === 0 ? 'top' : ''}"><td>${w.lever}</td><td class="n">${pct(w.from)} → ${pct(w.to)}</td><td class="n c3">${one(w.extra_customers)}</td><td class="n">${money(w.extra_arr)}</td></tr>`).join('');
+  $('#lifenote').textContent = m.rates.churn_cut
+    ? `Referred customers also tend to stay longer. At ${pct(i.churn)} lost a year, a typical customer is worth about ${money(m.lifetime_value_normal)} over their lifetime, and a referred one about ${money(m.lifetime_value_referred)}.`
+    : `At ${pct(i.churn)} lost a year, each customer is worth about ${money(m.lifetime_value_normal)} over their lifetime. Cautious assumptions do not count on referred customers staying longer.`;
+  return i;
+}
+
+function renderReview(d, isExample) {
+  const r = d.review;
+  const when = new Date(d.run_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  $('#review').innerHTML = `<div class="banner">${isExample ? 'Example review of the figures shown when the page opens. ' : ''}Written by Claude on ${when}${d.cached ? ' (saved from the last 24 hours)' : ''}.</div>
+    <p>${esc(r.summary)}</p>
+    <h3>The lever that matters most</h3><p>${esc(r.lever)}</p>
+    <h3>Risks</h3><ul>${r.risks.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+    <h3>What to do next</h3><ul>${r.actions.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+}
+
+const keyOf = (i) => JSON.stringify(i);
+
+function refresh() {
+  const i = renderNumbers();
+  $('#err').hidden = true;
+  const k = i ? keyOf(i) : null;
+  if (k && k === lastReviewKey) return;
+  if (example && k === keyOf(example.input)) { renderReview(example, true); return; }
+  $('#review').innerHTML = `<p class="note" style="margin:0 0 14px">${i ? 'Your figures have changed. Ask Claude for a review of these numbers.' : 'Fix the figures above to ask for a review.'}</p>`;
+  lastReviewKey = null;
+}
+
+async function refreshUsage() {
+  try {
+    const u = await (await fetch(API + '/api/usage?tool=referral')).json();
+    const left = Math.min(u.remaining_for_you, u.remaining_today);
+    $('#usage').textContent = left > 0 ? `You have ${left} free review${left === 1 ? '' : 's'} left today.` : 'No free reviews left today. The numbers above still work in full.';
+  } catch { /* keep default note */ }
+}
+
+$('#f').addEventListener('input', refresh);
+$('#f').addEventListener('change', refresh);
+$('#run').addEventListener('click', async () => {
+  const i = renderNumbers();
+  const showErr = (msg) => { $('#err').textContent = msg; $('#err').hidden = false; };
+  if (!i) return showErr(check(readInput()));
+  if (example && keyOf(i) === keyOf(example.input)) return showErr('This is the example review. Change any figure to get a review of your own numbers.');
+  const btn = $('#run');
+  $('#err').hidden = true;
+  btn.disabled = true; btn.innerHTML = '<span class="spinner" aria-hidden="true"></span>Claude is reviewing your figures…';
+  try {
+    const res = await fetch(API + '/api/referral', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(i) });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || 'Something went wrong.');
+    renderReview(d, false);
+    lastReviewKey = keyOf(i);
+  } catch (x) {
+    showErr(x.message || 'The review could not be written. Please try again later.');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Ask Claude to review my figures';
+    refreshUsage();
+  }
+});
+
+document.querySelectorAll('[data-motion]').forEach((b) => b.addEventListener('click', () => {
+  motion = b.dataset.motion;
+  document.querySelectorAll('[data-motion]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  $('#winwrap').hidden = motion !== 'sales_led';
+  $('#motionhint').textContent = motion === 'sales_led'
+    ? 'Customers book a demo or speak to sales before they buy.'
+    : 'A free trial or free plan, then customers upgrade on their own.';
+  refresh();
+}));
+document.querySelectorAll('[data-preset]').forEach((b) => b.addEventListener('click', () => {
+  preset = b.dataset.preset;
+  document.querySelectorAll('[data-preset]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  refresh();
+}));
+
+refresh();
+fetch('example.json').then((r) => (r.ok ? r.json() : null)).then((d) => { if (d) { example = d; refresh(); } }).catch(() => {});
+refreshUsage();
+</script>
+</body>
+</html>
