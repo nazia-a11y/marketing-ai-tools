@@ -117,11 +117,11 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
   <form id="f" novalidate>
     <div class="sect"><span class="num">1</span><h3>Your business</h3></div>
     <div class="grid2">
-      <label>Paying customers today<input name="customers" type="number" min="10" step="10" value="3000"><span class="hint">Active paying accounts, not individual users.</span></label>
-      <label>Currency<select name="currency"><option value="GBP">£ GBP</option><option value="USD">$ USD</option><option value="EUR">€ EUR</option></select></label>
+      <label>Number of paying customers<input name="customers" type="number" min="10" step="10" value="3000"><span class="hint">How many companies pay you today. A count, not money.</span></label>
+      <label>Customers lost each year (%)<input name="churn" type="number" min="1" max="90" step="1" value="12"><span class="hint">The share who cancel in a typical year.</span></label>
+      <label>Currency<select name="currency"><option value="GBP">£ GBP</option><option value="USD">$ USD</option><option value="EUR">€ EUR</option></select><span class="hint">Used for the money figures below.</span></label>
       <label>Average value of a customer a year<input name="acv" type="number" min="50" step="50" value="3600"><span class="hint">What a typical customer pays in a year.</span></label>
       <label>Cost to win a customer through paid channels<input name="paid_cac" type="number" min="1" step="50" value="2400"><span class="hint">Ad and campaign spend divided by the customers it brought in.</span></label>
-      <label>Customers lost each year (%)<input name="churn" type="number" min="1" max="90" step="1" value="12"><span class="hint">The share who cancel in a typical year.</span></label>
     </div>
 
     <div class="group">
