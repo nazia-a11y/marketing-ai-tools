@@ -22,6 +22,16 @@ Marketing plans often start from a budget rather than from the revenue the busin
 - A what-if table shows the budget saved by improving each funnel stage by five points, so the real constraint is clear.
 - Claude reviews the finished figures only: a summary, the biggest constraint, the risks and the next steps. One short call per review, with no web search, so each costs a fraction of a penny.
 
+## Referral Revenue Calculator
+
+**[Try it →](https://nazmh-referral-calculator.static.hf.space)**
+
+Shows whether a customer referral programme is worth running. From a few numbers a company already knows, it works out the new customers and revenue referrals could bring in over a year, what they would cost, and how that compares with paid channels, then asks Claude for a plain-English review.
+
+- Every number is calculated with fixed formulas. The assumptions come from published benchmarks, with a Cautious setting that uses the low end.
+- A what-if table shows which number to improve first, such as how many people sign up from a referral.
+- One short Claude call per review, with no web search.
+
 ## How it is built
 
 ```mermaid
@@ -42,5 +52,6 @@ flowchart LR
 | `worker/worker.js` | The shared Cloudflare Worker: limits, cache, API calls and the logic for each tool |
 | `visibility/index.html` | The AI Search Visibility Check page |
 | `planner/index.html` | The Pipeline Planner page |
+| `referral/index.html` | The Referral Revenue Calculator page |
 
 Built by Nazia Hossain. See also [In-Market Signals](https://github.com/nazia-a11y/in-market-signals).
