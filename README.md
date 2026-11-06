@@ -36,10 +36,10 @@ Shows whether a customer referral programme is worth running. From a few numbers
 
 **[Try it →](https://nazmh-expansion-route-planner.static.hf.space)**
 
-Helps a company hiring in a new country choose between employer of record and its own local company. From the hiring plan, a few yes or no questions and editable cost estimates, it shows the recommended route, when to switch, and the cost of each route over 24 months, then asks Claude for a plain-English review.
+Helps a company hiring in a new country choose between employer of record and its own local company. Pick one of ten countries, a salary and a hiring plan. It shows what each person really costs with 2026 employer contributions, the recommended route, when to switch, and the cost of each route over 24 months, then asks Claude for a plain-English review.
 
-- Every number is calculated with fixed formulas. Cost presets come from published ranges and can be replaced with real quotes.
-- Three checks (cost, risk and strategy) decide the route, so tax and contract risks are weighed alongside cost.
+- Every number is calculated with fixed formulas. Employer contributions come from government sources, and typical costs can be replaced with real quotes.
+- Three checks (cost, risk and strategy) decide the route, including country rules that limit employer of record.
 - One short Claude call per review, with no web search.
 
 ## How it is built
