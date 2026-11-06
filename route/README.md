@@ -1,4 +1,4 @@
-# Expansion Route Planner
+# Global Hiring Planner
 
 **[Try it →](https://nazmh-expansion-route-planner.static.hf.space)**
 
