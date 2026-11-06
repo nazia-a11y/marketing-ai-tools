@@ -98,13 +98,15 @@ const ROUTE_COUNTRIES = {
 };
 const ROUTE_LANGUAGE_UPLIFT = 1.3;                      // running cost uplift when you do not work in the local language
 const ROUTE_MONTHS = 24;
-const ROUTE_URGENCY_MONTHS = { month: 1, soon: 3, later: 99 };
+const ROUTE_START_MONTH = { month: 1, soon: 3, later: 5 };  // month the first person starts
 
-// Headcount each month, in a straight line from now to 12 months to 24 months.
+// Headcount each month: nobody before the first start month, then a straight line to 12 months and 24 months.
 function routeHeadcount(i) {
+  const start = ROUTE_START_MONTH[i.urgency] || 3;
   const out = [];
   for (let m = 1; m <= ROUTE_MONTHS; m++) {
-    const h = m <= 12 ? i.now + (i.m12 - i.now) * (m / 12) : i.m12 + (i.m24 - i.m12) * ((m - 12) / 12);
+    let h = 0;
+    if (m >= start) h = m <= 12 ? i.now + (i.m12 - i.now) * ((m - start) / Math.max(1, 12 - start)) : i.m12 + (i.m24 - i.m12) * ((m - 12) / 12);
     out.push(Math.max(0, Math.round(h)));
   }
   return out;
@@ -114,6 +116,8 @@ function routeMaths(i) {
   const r0 = (x) => Math.round(x);
   const c = ROUTE_COUNTRIES[i.country] || ROUTE_COUNTRIES.uk;
   const heads = routeHeadcount(i);
+  const start = ROUTE_START_MONTH[i.urgency] || 3;
+  const hires = heads.some((h) => h > 0);
 
   // The cost of employing one person, which is the same on either route.
   const employer = c.employer(i.salary, i);
@@ -123,20 +127,21 @@ function routeMaths(i) {
   for (const h of heads) teamCost += h * perPerson / 12 + payTax(h);
 
   // Route costs, on top of pay.
-  const running = i.running * (c.english || i.local_language ? 1 : ROUTE_LANGUAGE_UPLIFT);
+  const uplift = !c.english && !i.local_language;
+  const running = i.running * (uplift ? ROUTE_LANGUAGE_UPLIFT : 1);
   const eorMonth = (h) => h * i.fee;
   const ownMonth = (h) => running + h * i.payroll;
   const setupMonths = Math.ceil(c.setup_months);
   const readyMonth = setupMonths + 1;              // earliest month your own company can employ people
+  const passes = i.country === 'sg' && !i.citizens; // work pass holders cannot be employed through employer of record
 
   // Month by month, when does your own company become cheaper to run than employer of record?
   let switchMonth = null;
-  for (let m = 1; m <= ROUTE_MONTHS; m++) if (eorMonth(heads[m - 1]) >= ownMonth(heads[m - 1]) && heads[m - 1] > 0) { switchMonth = m; break; }
+  for (let m = 1; m <= ROUTE_MONTHS; m++) if (heads[m - 1] > 0 && eorMonth(heads[m - 1]) >= ownMonth(heads[m - 1])) { switchMonth = m; break; }
   const crossHead = i.fee > i.payroll ? Math.ceil(running / (i.fee - i.payroll)) : null;
 
-  // Cost of a plan that uses employer of record until a given month, then your own company.
-  // People who need work passes in Singapore cannot be employed through employer of record, so nobody starts before your own company is ready.
-  const passes = i.country === 'sg' && !i.citizens;
+  // Cost of a plan that uses employer of record until month sw, then your own company.
+  // Setup is paid when it starts, and running costs begin once the company is ready.
   const planCost = (sw) => {
     const cum = [];
     let t = 0;
@@ -147,69 +152,106 @@ function routeMaths(i) {
     }
     return cum;
   };
+  const total = (sw) => planCost(sw)[ROUTE_MONTHS - 1];
   const stayEor = planCost(null);
+  const direct = Math.max(readyMonth, start);       // own company ready for the first hire, no employer of record
   const financialSwitch = switchMonth === null ? null : Math.max(switchMonth, readyMonth);
-  const financialPlan = financialSwitch === null ? null : planCost(financialSwitch);
-  const financial = financialPlan !== null && financialPlan[ROUTE_MONTHS - 1] < stayEor[ROUTE_MONTHS - 1];
+  // The cheapest way to end up on your own company, among the sensible switch months.
+  const options = [direct, financialSwitch].filter((x) => x !== null && x <= ROUTE_MONTHS);
+  const cheapestOwn = options.reduce((a, b) => (total(b) < total(a) ? b : a), options[0]);
+  const financial = hires && total(cheapestOwn) < stayEor[ROUTE_MONTHS - 1];
 
-  // Country rules that limit employer of record count as a risk when people would stay on it beyond the limit.
-  const limitHit = c.eor_limit !== null && heads.some((h, k) => h > 0 && k + 1 > c.eor_limit);
-  // Risks that need your own company as soon as it can be ready, as opposed to a time limit you can plan around.
-  const urgentRisk = !!(i.risk_sales || i.risk_manager || i.risk_licences || i.risk_regulated || passes || (c.eor_limit === 0 && heads.some((h) => h > 0)));
+  // Risks. Urgent ones need your own company as soon as it can be ready; a country time limit can be planned around.
+  const limitHit = c.eor_limit !== null && c.eor_limit > 0 && heads.some((h, k) => h > 0 && k + 1 > c.eor_limit);
+  const banned = c.eor_limit === 0 && hires;
+  const urgentRisk = !!(i.risk_sales || i.risk_manager || i.risk_licences || i.risk_regulated || passes || banned);
   const risk = urgentRisk || limitHit;
   const strategic = !!(i.plan_permanent || i.ma);
   const score = [financial, risk, strategic].filter(Boolean).length;
 
   // Pick the plan.
-  let route, sw = null;
-  if (passes) {
+  let route = 'eor', sw = null;
+  if (hires && (passes || score >= 2)) {
     route = 'own';
-    sw = readyMonth;
-  } else if (score >= 2) {
-    route = 'own';
-    // Switch as soon as possible for urgent risks, otherwise when your own company becomes cheaper,
-    // and never later than a country's limit on employer of record.
-    if (urgentRisk) sw = readyMonth;
-    else if (financial) sw = financialSwitch;
-    else sw = limitHit ? c.eor_limit : readyMonth;
+    if (urgentRisk) sw = direct;
+    else if (financial) sw = cheapestOwn;
+    else sw = limitHit ? c.eor_limit : direct;
     if (limitHit) sw = Math.max(readyMonth, Math.min(sw, c.eor_limit));
-  } else {
-    route = 'eor';
+    if (start >= readyMonth && total(direct) <= total(sw)) sw = direct;
   }
   const plan = route === 'own' ? planCost(sw) : stayEor;
   const setupStart = sw === null ? null : Math.max(1, sw - setupMonths);
-  const needBy = ROUTE_URGENCY_MONTHS[i.urgency] || 3;
-  const bridge = route === 'own' && !passes && (heads[0] > 0 || needBy < readyMonth);
+  const usesEor = route === 'eor' || (!passes && heads.slice(0, sw - 1).some((h) => h > 0));
+  const firstHire = heads.findIndex((h) => h > 0) + 1;
+  const altOwn = hires ? (financial ? cheapestOwn : direct) : null;
+  const altSaving = altOwn ? stayEor[ROUTE_MONTHS - 1] - total(altOwn) : 0;
 
-  const steps = [];
-  if (route === 'own') {
-    if (setupStart === 1) steps.push('Start setting up your ' + c.entity + ' now. It usually takes ' + c.setup_range + ' in ' + c.name + '.');
-    else steps.push('Start setting up your ' + c.entity + ' in month ' + setupStart + '. It usually takes ' + c.setup_range + ' in ' + c.name + '.');
-    if (passes) steps.push('Your hires need work passes, which only your own company can sponsor, so they can start in month ' + sw + ', once it is ready.');
-    else if (bridge || sw > 1) steps.push('Use employer of record for your first hires' + (sw > 1 ? ' until month ' + sw : '') + ', so you can hire straight away.');
-    const why = urgentRisk ? ', as soon as it is ready, because of the risks flagged below'
-      : financial && sw === financialSwitch ? ', when it becomes cheaper to run than employer of record'
-      : limitHit && sw === c.eor_limit ? ', before the ' + c.eor_limit + '-month limit on employer of record in ' + c.name
-      : ', as soon as it is ready, for the permanent presence you plan';
-    if (!passes) steps.push('Move your team onto your own company in month ' + sw + why + '.');
+  // The headline, the main reason and the money, written for the person reading the page.
+  let headline, reason, money;
+  const per = c.name;
+  const cur = (n) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: c.currency, maximumFractionDigits: 0 }).format(Math.round(n / 10) * 10);
+  if (!hires) {
+    headline = 'Add at least one person to see your route';
+    reason = 'Your hiring plan has nobody starting in the next 24 months.';
+    money = '';
+  } else if (route === 'own') {
+    if (passes && start < sw) headline = 'Set up your own company first. Your first hire can start in month ' + sw;
+    else if (!usesEor) headline = 'Set up your own company before your first hire';
+    else headline = 'Employer of record first, then your own company from month ' + sw;
+    if (passes) reason = 'Your hires need work passes, and in Singapore only your own company can sponsor them.';
+    else if (banned) reason = 'Spanish law reserves supplying workers to licensed temporary work agencies, so long-term employer of record is risky in Spain.';
+    else if (i.risk_sales || i.risk_manager) reason = 'Local sales staff or a country manager can create a taxable presence, even through employer of record.';
+    else if (i.risk_licences) reason = 'Local licences, contracts in your own name, tenders or local data storage usually need your own company.';
+    else if (i.risk_regulated) reason = 'Regulated sectors often need a local company from the start.';
+    else if (!usesEor) reason = 'Your own company can be ready by month ' + sw + ', when your first person starts, so you can skip employer of record.';
+    else if (financial && sw === cheapestOwn && switchMonth !== null && sw >= switchMonth) reason = 'Your own company becomes cheaper to run once you reach about ' + crossHead + ' people, around month ' + switchMonth + '.';
+    else if (limitHit) reason = per + ' limits employer of record placements to ' + c.eor_limit + ' months, and your plan runs longer.';
+    else reason = i.ma ? 'You are hiring as part of an acquisition or carve-out, which usually needs your own company.' : 'You plan a permanent presence, so your own company is worth setting up as soon as it can be ready.';
+    const d = plan[ROUTE_MONTHS - 1] - stayEor[ROUTE_MONTHS - 1];
+    money = d <= 0 ? 'Saves about ' + cur(-d) + ' over 24 months compared with employer of record, on top of pay.'
+      : 'Costs about ' + cur(d) + ' more over 24 months than employer of record, the price of moving early to manage the risks.';
   } else {
-    steps.push('Hire through employer of record. You can start within days or weeks, with no setup cost.');
-    if (switchMonth !== null) steps.push('Review the decision in month ' + Math.max(1, switchMonth - setupMonths) + '. Your own company starts to cost less to run at about ' + (crossHead || heads[switchMonth - 1]) + ' people, around month ' + switchMonth + '.');
-    else steps.push('At this hiring plan, your own company does not become cheaper within 24 months. Review the decision if your plans grow.');
-    if (limitHit) steps.push('Plan for the ' + c.eor_limit + '-month limit on employer of record in ' + c.name + '. By month ' + c.eor_limit + ', move people onto your own company or end their placements.');
+    headline = limitHit ? 'Employer of record for now, with a plan for the ' + c.eor_limit + '-month limit' : 'Employer of record for now';
+    if (financial) reason = 'Your own company would save money from about ' + crossHead + ' people, but with no risks reported and no permanent presence planned, it is not worth setting up yet.';
+    else if (switchMonth !== null) reason = 'Your own company only becomes cheaper at about ' + crossHead + ' people, and over 24 months it would not pay back its setup cost.';
+    else reason = 'At this size, your own company would cost more to run than employer of record for the whole 24 months.';
+    money = altSaving > 0 ? 'Setting up your own company could save about ' + cur(altSaving) + ' over 24 months, but only if you are sure you are staying.'
+      : 'Staying on employer of record saves about ' + cur(-altSaving) + ' over 24 months compared with setting up your own company.';
   }
 
+  // Short notes that show how the rest of the answers affect the result.
+  const notes = [];
+  if (hires && route === 'own' && usesEor && start === 1) notes.push('Because your first person starts within a month, employer of record lets them start before your own company is ready.');
+  if (hires && route === 'own' && !usesEor && !passes) notes.push('Because your first hire is not until month ' + firstHire + ', there is time to set up your own company first.');
+  if (passes && start < sw) notes.push('Your first hire cannot start until month ' + sw + ', when your own company is ready to sponsor work passes.');
+  if (!i.exclusive && !urgentRisk) notes.push('Because they will not work only for you under your direction, contractors could also work.');
+  if (i.exclusive) notes.push('People who work only for you under your direction are usually employees, so contractors are not a safe option.');
+  const others = [i.risk_sales || i.risk_manager ? 'local sales or management staff' : null, i.risk_licences ? 'licences, contracts or data storage' : null, i.risk_regulated ? 'a regulated sector' : null].filter(Boolean);
+  if (others.length > 1) notes.push('You also flagged ' + others.slice(1).join(' and ') + (others.length > 2 ? ', which point' : ', which points') + ' the same way.');
+  if (hires && i.plan_permanent) notes.push('You plan a permanent presence, which also points to your own company.');
+  if (hires && !i.plan_permanent && !i.ma && route === 'own') notes.push('Even without a permanent presence planned, the costs or the risks point to your own company.');
+  if (i.ma) notes.push('As this is part of an acquisition or carve-out, plan payroll and employment transfers alongside the deal.');
+  if (uplift) notes.push('Running your own company costs 30% more here because you do not work in the local language.');
+
+  const when = (m) => (m <= 1 ? 'Now' : 'Month ' + m);
+  const steps = [];
+  if (hires && route === 'own') {
+    steps.push([setupStart, when(setupStart) + ': start setting up your ' + c.entity + '. It usually takes ' + c.setup_range + '.']);
+    if (usesEor) steps.push([firstHire, when(firstHire) + ': hire your first ' + (heads[firstHire - 1] === 1 ? 'person' : heads[firstHire - 1] + ' people') + ' through employer of record.']);
+    steps.push([sw + 0.5, when(sw) + ': ' + (usesEor ? 'move your team onto your own company.' : 'your own company employs your first ' + (heads[sw - 1] === 1 ? 'person' : heads[sw - 1] + ' people') + ' directly.')]);
+  } else if (hires) {
+    steps.push([firstHire, when(firstHire) + ': hire your first ' + (heads[firstHire - 1] === 1 ? 'person' : heads[firstHire - 1] + ' people') + ' through employer of record. There is no setup cost.']);
+    if (switchMonth !== null) steps.push([Math.max(firstHire, switchMonth - setupMonths), when(Math.max(firstHire, switchMonth - setupMonths)) + ': review the decision. Your own company starts to cost less to run at about ' + crossHead + ' people.']);
+    if (limitHit) steps.push([c.eor_limit, 'By month ' + c.eor_limit + ': move people onto your own company or end their placements, because of the ' + c.eor_limit + '-month limit in ' + per + '.']);
+    if (switchMonth === null && !limitHit) steps.push([24, 'Month 24: review the decision if your plans grow.']);
+  }
+  steps.sort((a, b) => a[0] - b[0]);
+
   const flags = [];
-  if (c.eor_limit === 0) flags.push(c.eor + ' Take local legal advice before using employer of record for anything beyond a short, temporary need.');
-  else if (limitHit) flags.push(c.eor + ' Your plan keeps people in the country beyond month ' + c.eor_limit + ', so this counts as a risk.');
-  else flags.push(c.eor);
-  if (passes) flags.push('You said your hires are not Singapore citizens or permanent residents, so they will need work passes, which your own company must sponsor.');
+  flags.push(banned ? c.eor + ' Take local legal advice before using employer of record for anything beyond a short, temporary need.' : c.eor);
   if (i.risk_sales || i.risk_manager) flags.push('Staff who sign contracts, close local sales or run the local operation can create a taxable presence in that country, even through employer of record. Get tax advice for that country before they start.');
   if (i.risk_licences) flags.push('Local licences, contracts in your own name, public tenders or local data storage usually need your own local company.');
   if (i.risk_regulated) flags.push('Regulated sectors often need a local company from the start. Check the rules for that country early.');
-  if (i.ma) flags.push('Acquisitions and carve-outs come with fixed deadlines, so plan payroll and employment transfers in parallel with the deal.');
-  if (i.exclusive) flags.push('People who work only for you, full-time and under your direction, are usually treated as employees. Using contractors for them is risky, so employer of record or your own company is the safer choice.');
-  if (!c.english && !i.local_language) flags.push('Running a company where you do not work in the local language costs more, so the running cost has been raised by 30%.');
 
   return {
     country: c.name,
@@ -219,6 +261,8 @@ function routeMaths(i) {
     cost_per_person_year: r0(perPerson),
     team_cost_24_months: r0(teamCost),
     route,
+    uses_employer_of_record: usesEor,
+    first_hire_month: firstHire || null,
     switch_month: sw,
     setup_start_month: setupStart,
     ready_month: readyMonth,
@@ -233,7 +277,11 @@ function routeMaths(i) {
     running_cost_used: r0(running),
     checks: { financial, risk, strategic, score },
     country_rules: { eor_limit_months: c.eor_limit, limit_applies: limitHit, needs_work_pass_sponsor: passes },
-    steps,
+    headline,
+    reason,
+    money,
+    notes,
+    steps: steps.map((x) => x[1]),
     flags
   };
 }
