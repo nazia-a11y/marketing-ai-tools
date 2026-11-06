@@ -32,6 +32,16 @@ Shows whether a customer referral programme is worth running. From a few numbers
 - A what-if table shows which number to improve first, such as how many people sign up from a referral.
 - One short Claude call per review, with no web search.
 
+## Expansion Route Planner
+
+**[Try it →](https://nazmh-expansion-route-planner.static.hf.space)**
+
+Helps a company hiring in a new country choose between employer of record and its own local company. From the hiring plan, a few yes or no questions and editable cost estimates, it shows the recommended route, when to switch, and the cost of each route over 24 months, then asks Claude for a plain-English review.
+
+- Every number is calculated with fixed formulas. Cost presets come from published ranges and can be replaced with real quotes.
+- Three checks (cost, risk and strategy) decide the route, so tax and contract risks are weighed alongside cost.
+- One short Claude call per review, with no web search.
+
 ## How it is built
 
 ```mermaid
@@ -53,5 +63,6 @@ flowchart LR
 | `visibility/index.html` | The AI Search Visibility Check page |
 | `planner/index.html` | The Pipeline Planner page |
 | `referral/index.html` | The Referral Revenue Calculator page |
+| `route/index.html` | The Expansion Route Planner page |
 
 Built by Nazia Hossain. See also [In-Market Signals](https://github.com/nazia-a11y/in-market-signals).
