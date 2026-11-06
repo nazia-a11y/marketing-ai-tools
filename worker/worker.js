@@ -11,8 +11,8 @@
 //   PLAN_VISITOR_CAP   pipeline planner: runs per visitor per day (default 5)
 //   REF_DAILY_CAP      referral calculator: total runs per day (default 30)
 //   REF_VISITOR_CAP    referral calculator: runs per visitor per day (default 5)
-//   ROUTE_DAILY_CAP    expansion route planner: total runs per day (default 30)
-//   ROUTE_VISITOR_CAP  expansion route planner: runs per visitor per day (default 5)
+//   ROUTE_DAILY_CAP    global hiring planner: total runs per day (default 30)
+//   ROUTE_VISITOR_CAP  global hiring planner: runs per visitor per day (default 5)
 //   MODEL              Claude model (default claude-haiku-5-5)
 
 const DEFAULTS = { DAILY_CAP: 20, VISITOR_CAP: 2, PLAN_DAILY_CAP: 30, PLAN_VISITOR_CAP: 5, REF_DAILY_CAP: 30, REF_VISITOR_CAP: 5, ROUTE_DAILY_CAP: 30, ROUTE_VISITOR_CAP: 5, MODEL: 'claude-haiku-5-5' };
@@ -140,7 +140,7 @@ async function usage(request, env, tool) {
 
 // Cached results are free and do not count against any limit.
 async function runLimited(request, env, tool, input, work) {
-  const key = `cache:${tool}:v4:${await sha256(JSON.stringify(input))}`;
+  const key = `cache:${tool}:v5:${await sha256(JSON.stringify(input))}`;
   const cached = await env.STORE.get(key, 'json');
   if (cached) {
     await track(request, env, tool, 'cached');
@@ -661,9 +661,9 @@ Write a short review in British English, without contractions, in plain words a 
   return { tool: 'referral', input, model: env.MODEL || DEFAULTS.MODEL, results: maths, review };
 }
 
-// ---------- expansion route planner ----------
+// ---------- global hiring planner ----------
 
-// Expansion Route Planner: the formulas, shared word for word by the page and the server.
+// Global Hiring Planner: the formulas, shared word for word by the page and the server.
 // Employer contribution rules are 2026 figures from government sources and the big accounting firms' tax guides.
 // Setup and running costs are typical estimates from local advisers; users can replace them with real quotes.
 const clampTo = (x, lo, hi) => Math.min(Math.max(x, lo), hi);
@@ -819,7 +819,9 @@ function routeMaths(i) {
 
   // Country rules that limit employer of record count as a risk when people would stay on it beyond the limit.
   const limitHit = c.eor_limit !== null && heads.some((h, k) => h > 0 && k + 1 > c.eor_limit);
-  const risk = !!(i.risk_sales || i.risk_manager || i.risk_licences || i.risk_regulated || limitHit || passes);
+  // Risks that need your own company as soon as it can be ready, as opposed to a time limit you can plan around.
+  const urgentRisk = !!(i.risk_sales || i.risk_manager || i.risk_licences || i.risk_regulated || passes || (c.eor_limit === 0 && heads.some((h) => h > 0)));
+  const risk = urgentRisk || limitHit;
   const strategic = !!(i.plan_permanent || i.ma);
   const score = [financial, risk, strategic].filter(Boolean).length;
 
@@ -830,8 +832,12 @@ function routeMaths(i) {
     sw = readyMonth;
   } else if (score >= 2) {
     route = 'own';
-    sw = risk ? readyMonth : (financial ? financialSwitch : readyMonth);
-    if (c.eor_limit) sw = Math.min(sw, Math.max(readyMonth, c.eor_limit));
+    // Switch as soon as possible for urgent risks, otherwise when your own company becomes cheaper,
+    // and never later than a country's limit on employer of record.
+    if (urgentRisk) sw = readyMonth;
+    else if (financial) sw = financialSwitch;
+    else sw = limitHit ? c.eor_limit : readyMonth;
+    if (limitHit) sw = Math.max(readyMonth, Math.min(sw, c.eor_limit));
   } else {
     route = 'eor';
   }
@@ -846,11 +852,16 @@ function routeMaths(i) {
     else steps.push('Start setting up your ' + c.entity + ' in month ' + setupStart + '. It usually takes ' + c.setup_range + ' in ' + c.name + '.');
     if (passes) steps.push('Your hires need work passes, which only your own company can sponsor, so they can start in month ' + sw + ', once it is ready.');
     else if (bridge || sw > 1) steps.push('Use employer of record for your first hires' + (sw > 1 ? ' until month ' + sw : '') + ', so you can hire straight away.');
-    if (!passes) steps.push('Move your team onto your own company in month ' + sw + '.');
+    const why = urgentRisk ? ', as soon as it is ready, because of the risks flagged below'
+      : financial && sw === financialSwitch ? ', when it becomes cheaper to run than employer of record'
+      : limitHit && sw === c.eor_limit ? ', before the ' + c.eor_limit + '-month limit on employer of record in ' + c.name
+      : ', as soon as it is ready, for the permanent presence you plan';
+    if (!passes) steps.push('Move your team onto your own company in month ' + sw + why + '.');
   } else {
     steps.push('Hire through employer of record. You can start within days or weeks, with no setup cost.');
     if (switchMonth !== null) steps.push('Review the decision in month ' + Math.max(1, switchMonth - setupMonths) + '. Your own company starts to cost less to run at about ' + (crossHead || heads[switchMonth - 1]) + ' people, around month ' + switchMonth + '.');
     else steps.push('At this hiring plan, your own company does not become cheaper within 24 months. Review the decision if your plans grow.');
+    if (limitHit) steps.push('Plan for the ' + c.eor_limit + '-month limit on employer of record in ' + c.name + '. By month ' + c.eor_limit + ', move people onto your own company or end their placements.');
   }
 
   const flags = [];
