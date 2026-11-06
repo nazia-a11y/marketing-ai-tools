@@ -34,7 +34,7 @@ Shows whether a customer referral programme is worth running. From a few numbers
 
 ## Global Hiring Planner
 
-**[Try it →](https://nazmh-expansion-route-planner.static.hf.space)**
+**[Try it →](https://nazmh-global-hiring-planner.static.hf.space)**
 
 Helps a company hiring in a new country choose between employer of record and its own local company. Pick one of ten countries, a salary and a hiring plan. It shows what each person really costs with 2026 employer contributions, the recommended route, when to switch, and the cost of each route over 24 months, then asks Claude for a plain-English review.
 
@@ -63,6 +63,6 @@ flowchart LR
 | `visibility/index.html` | The AI Search Visibility Check page |
 | `planner/index.html` | The Pipeline Planner page |
 | `referral/index.html` | The Referral Revenue Calculator page |
-| `route/index.html` | The Global Hiring Planner page |
+| `hiring/index.html` | The Global Hiring Planner page |
 
 Built by Nazia Hossain. See also [In-Market Signals](https://github.com/nazia-a11y/in-market-signals).
