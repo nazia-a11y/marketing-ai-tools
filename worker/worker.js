@@ -3,7 +3,7 @@
 //
 // Bindings (set in the Cloudflare dashboard):
 //   ANTHROPIC_API_KEY  secret
-//   STORE              KV namespace (cache and run counters)
+//   STORE              KV namespace (cache, run counters and daily usage stats)
 //   ALLOWED_ORIGINS    comma-separated list of pages allowed to call this API
 //   DAILY_CAP          visibility check: total runs per day (default 20)
 //   VISITOR_CAP        visibility check: runs per visitor per day (default 2)
@@ -29,7 +29,9 @@ export default {
       if (url.pathname === '/api/health') return json({ ok: true }, 200, cors);
       if (url.pathname === '/api/usage' && request.method === 'GET') {
         const t = url.searchParams.get('tool');
-        return json(await usage(request, env, t === 'plan' || t === 'referral' || t === 'route' ? t : 'visibility'), 200, cors);
+        const tool = t === 'plan' || t === 'referral' || t === 'route' ? t : 'visibility';
+        if (cors['Access-Control-Allow-Origin']) ctx.waitUntil(track(request, env, tool, 'loads'));
+        return json(await usage(request, env, tool), 200, cors);
       }
       if (url.pathname === '/api/visibility' && request.method === 'POST') {
         if (!cors['Access-Control-Allow-Origin']) return json({ error: 'This page is not allowed to use the API.' }, 403, cors);
@@ -140,7 +142,10 @@ async function usage(request, env, tool) {
 async function runLimited(request, env, tool, input, work) {
   const key = `cache:${tool}:v3:${await sha256(JSON.stringify(input))}`;
   const cached = await env.STORE.get(key, 'json');
-  if (cached) return { ...cached, cached: true };
+  if (cached) {
+    await track(request, env, tool, 'cached');
+    return { ...cached, cached: true };
+  }
 
   const c = caps(env, tool);
   const { dayKey, visKey } = counterKeys(tool, await visitorId(request));
@@ -162,7 +167,23 @@ async function runLimited(request, env, tool, input, work) {
   }
   result.run_at = new Date().toISOString();
   await env.STORE.put(key, JSON.stringify(result), { expirationTtl: CACHE_SECONDS });
+  await track(request, env, tool, 'runs');
   return { ...result, cached: false };
+}
+
+// Daily usage stats, kept with no expiry so use can be reviewed later.
+// loads: calls from a tool page (once when it opens and once after each review),
+// runs: new reviews, cached: repeat reviews served from the cache,
+// visitors: short hashed addresses, the same across days, so repeat visitors can be told apart.
+async function track(request, env, tool, field) {
+  try {
+    const k = `stats:${tool}:${today()}`;
+    const s = (await env.STORE.get(k, 'json')) || { loads: 0, runs: 0, cached: 0, visitors: [] };
+    s[field] = (s[field] || 0) + 1;
+    const v = (await sha256((request.headers.get('CF-Connecting-IP') || 'unknown') + 'stats')).slice(0, 8);
+    if (!s.visitors.includes(v) && s.visitors.length < 500) s.visitors.push(v);
+    await env.STORE.put(k, JSON.stringify(s));
+  } catch (e) { /* stats must never break a tool */ }
 }
 
 async function claude(env, body) {
