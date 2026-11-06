@@ -32,7 +32,7 @@ Shows whether a customer referral programme is worth running. From a few numbers
 - A what-if table shows which number to improve first, such as how many people sign up from a referral.
 - One short Claude call per review, with no web search.
 
-## Expansion Route Planner
+## Global Hiring Planner
 
 **[Try it →](https://nazmh-expansion-route-planner.static.hf.space)**
 
@@ -63,6 +63,6 @@ flowchart LR
 | `visibility/index.html` | The AI Search Visibility Check page |
 | `planner/index.html` | The Pipeline Planner page |
 | `referral/index.html` | The Referral Revenue Calculator page |
-| `route/index.html` | The Expansion Route Planner page |
+| `route/index.html` | The Global Hiring Planner page |
 
 Built by Nazia Hossain. See also [In-Market Signals](https://github.com/nazia-a11y/in-market-signals).
