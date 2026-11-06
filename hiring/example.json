@@ -144,24 +144,24 @@
       "Month 7: move your team onto your own company."
     ],
     "flags": [
-      "In Germany an employer of record must hold a labour leasing licence, and the same person can usually be placed with you for at most 18 months."
+      "In Germany an employer of record must hold a labour leasing licence, and the same person can usually be placed with you for at most 18 months. Your plan has people in the country beyond month 18, so this counts as a risk."
     ]
   },
   "review": {
-    "summary": "The recommended route is to hire through an employer of record from month 3, then move the team onto your own German company (GmbH) from month 7. This saves about €58,180 over 24 months compared with staying on an employer of record, because the cost on top of pay is €71,085 on the recommended plan against €129,265 if you stay.",
-    "driver": "All three checks point towards your own company: financial, strategic and risk, giving a score of 3. The team reaches about six people around month 7, which is when running your own company becomes cheaper than paying an employer of record's fee, and the permanent presence you plan also favours your own company.",
+    "summary": "The recommended route is to hire the first three people through an employer of record from month 3, then move the team onto the company's own German GmbH from month 7. The GmbH is cheaper once the team reaches about six people, and the employer of record's 18-month limit would be exceeded by the plan's roles beyond month 18.",
+    "driver": "All three checks (financial, risk and strategic) point towards setting up the company's own local company, and the score is 3 out of 3. Over 24 months, the employer of record route adds €129,265 on top of pay, against €71,085 for the own company route, a saving of €58,180.",
     "risks": [
-      "The GmbH setup usually takes 6 to 12 weeks, so starting in month 4 leaves little margin to be ready by the month 7 deadline. A delay would keep the team on the more expensive employer of record route for longer.",
-      "The risk check points towards your own company, yet none of the specific risk triggers (sales, manager, licences or regulated activity) was reported. The reason for this check should be understood before committing.",
-      "Running your own company costs 30% more because you do not work in the local language, and the running cost of €2,600 a month depends on this uplift. Any change in headcount or cost assumptions could move the crossover point."
+      "The employer of record's 18-month limit applies, and the plan keeps people in the country beyond month 18, so a GmbH or a different structure must be in place before then.",
+      "The GmbH must be ready by month 7, but setup usually takes 6 to 12 weeks from month 4, so there is little margin for delay.",
+      "Running the GmbH costs about 30% more because the company does not work in the local language, and this extra cost is already included in the plan figures."
     ],
     "confirm": [
-      "Can a German GmbH realistically be registered, with bank account, payroll registration and social security set up, within the window from month 4 to month 7?",
-      "Are the three to five people who work only under your direction employees in Germany, and does the employer of record's labour leasing licence cover them for the planned months?",
-      "Do the 2026 employer contribution figures, the €5,000 setup cost and the €2,000 monthly running cost (plus the 30% uplift) reflect current German requirements and fees?",
-      "What specifically is driving the risk check to point towards your own company, and does the 18-month placement limit affect any of your planned roles?"
+      "Does the 18-month limit apply to each of the planned roles, and what is the correct transition point from the employer of record to the GmbH?",
+      "Can a GmbH be formed and registered for payroll within the 6 to 12 week window if setup starts in month 4, and what documents are needed from a non-German-speaking owner or managing director?",
+      "What employer obligations apply when staff move from the employer of record to the GmbH, including notice, continuity of service and any consultation requirements?",
+      "Are the German tax, social security and payroll registrations for the GmbH likely to be complete before the first payroll run in month 7?"
     ]
   },
-  "run_at": "2026-11-06T16:53:50.352Z",
+  "run_at": "2026-11-06T16:58:14.717Z",
   "cached": false
 }
