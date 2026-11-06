@@ -140,7 +140,7 @@ async function usage(request, env, tool) {
 
 // Cached results are free and do not count against any limit.
 async function runLimited(request, env, tool, input, work) {
-  const key = `cache:${tool}:v6:${await sha256(JSON.stringify(input))}`;
+  const key = `cache:${tool}:v7:${await sha256(JSON.stringify(input))}`;
   const cached = await env.STORE.get(key, 'json');
   if (cached) {
     await track(request, env, tool, 'cached');
@@ -913,7 +913,7 @@ function routeMaths(i) {
   steps.sort((a, b) => a[0] - b[0]);
 
   const flags = [];
-  flags.push(banned ? c.eor + ' Take local legal advice before using employer of record for anything beyond a short, temporary need.' : c.eor);
+  flags.push(banned ? c.eor + ' Take local legal advice before using employer of record for anything beyond a short, temporary need.' : limitHit ? c.eor + ' Your plan has people in the country beyond month ' + c.eor_limit + ', so this counts as a risk.' : c.eor);
   if (i.risk_sales || i.risk_manager) flags.push('Staff who sign contracts, close local sales or run the local operation can create a taxable presence in that country, even through employer of record. Get tax advice for that country before they start.');
   if (i.risk_licences) flags.push('Local licences, contracts in your own name, public tenders or local data storage usually need your own local company.');
   if (i.risk_regulated) flags.push('Regulated sectors often need a local company from the start. Check the rules for that country early.');
