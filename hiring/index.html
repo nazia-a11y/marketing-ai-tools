@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Global Hiring Planner</title>
+<meta name="description" content="Pick a country, a salary and a hiring plan to see the true cost of each hire, whether to use employer of record or your own local company, when to switch, and a plain-English review from Claude.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{--navy:#1C2B4A;--blue:#3E5A8A;--clay:#B07A5A;--line:#E8E2DA;--paper:#F8F6F2;--ink:#1F2430;--muted:#6B6B6B;--bg:#F6F5F2}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:Inter,system-ui,sans-serif;color:var(--ink);font-size:15px;line-height:1.55}
+a{color:var(--blue)}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 16px 56px;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{width:36px;height:36px;border-radius:10px;background:var(--navy);display:flex;align-items:center;justify-content:center}
+h1{margin:0;font-size:22px;font-weight:700;color:var(--navy);letter-spacing:-.01em}
+.tag{font-size:12px;font-weight:500;color:#4B5563;background:#E9EBEF;border-radius:999px;padding:3px 10px}
+.gh{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 16px;border-radius:999px;background:var(--navy);color:#fff;font-size:14px;font-weight:600;text-decoration:none}
+.gh:hover{background:var(--clay);color:#fff}
+.lead{margin:0;color:#3A3F4B;max-width:760px;font-size:16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px}
+h2{margin:0 0 4px;font-size:18px;color:var(--navy)}
+h3{margin:0 0 10px;font-size:15px;color:var(--navy)}
+.sub{margin:0 0 14px;color:var(--muted);font-size:14px}
+.layout{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:20px;align-items:start}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;color:#374151}
+input,select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #D1D5DB;border-radius:8px;background:#fff;color:var(--ink);min-height:40px;width:100%}
+input:focus,select:focus{outline:2px solid var(--blue);outline-offset:1px;border-color:var(--blue)}
+.group{margin-top:18px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12.5px;font-weight:600;color:var(--muted);padding:0 6px 6px 0}
+td{padding:4px 6px 4px 0;vertical-align:middle}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.tile{background:var(--paper);border-radius:10px;padding:12px 14px}
+.tile .k{font-size:13px;color:var(--muted)}
+.tile .v{font-size:26px;font-weight:700;color:var(--navy);line-height:1.2;font-variant-numeric:tabular-nums}
+.tile .s{font-size:12.5px;color:var(--muted)}
+.top td{font-weight:600;color:var(--navy)}
+.top td:first-child::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--clay);margin-right:7px}
+.note{font-size:13px;color:var(--muted);margin:10px 0 0}
+.warn{background:#FBF3EE;border-left:3px solid var(--clay);padding:8px 12px;font-size:13.5px;color:#5A3A28;margin:10px 0 0;border-radius:0 8px 8px 0}
+.ai .banner{background:var(--paper);border-left:3px solid var(--clay);padding:10px 14px;font-size:14px;color:#3A3F4B;margin-bottom:14px}
+.ai p{margin:0 0 10px}
+.ai ul{margin:0 0 10px;padding-left:20px}
+.ai li{margin-bottom:4px}
+.row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+button.run{font:inherit;font-weight:600;font-size:15px;background:var(--clay);color:#fff;border:0;border-radius:999px;padding:0 22px;min-height:44px;cursor:pointer}
+button.run:hover{background:#9A6649}
+button.run:disabled{background:#C9B3A5;cursor:progress}
+.err{color:#A32D2D;font-size:14px;margin:8px 0 0}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
+details{font-size:14px}
+summary{cursor:pointer;font-weight:600;color:var(--navy)}
+.how ol{margin:8px 0 0;padding-left:20px}
+.how p{margin:8px 0 0}
+.how li{margin-bottom:4px}
+footer{font-size:12.5px;color:var(--muted);text-align:center}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0;padding:0;list-style:none}
+.steps li{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;color:#3A3F4B;display:flex;gap:10px;align-items:flex-start}
+.steps .num{flex:none;width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.steps b{display:block;color:var(--navy)}
+.hint{font-size:12.5px;font-weight:400;color:var(--muted);line-height:1.4}
+.sect{display:flex;align-items:center;gap:8px;margin:0 0 10px}
+.sect .num{width:22px;height:22px;border-radius:50%;background:var(--clay);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+.sect h3{margin:0}
+.seg{display:inline-flex;border:1px solid #D1D5DB;border-radius:999px;padding:3px;gap:3px;margin:0 0 6px;flex-wrap:wrap}
+.seg button{font:inherit;font-size:13.5px;font-weight:600;border:0;background:transparent;color:#374151;border-radius:999px;padding:6px 14px;cursor:pointer;min-height:34px}
+.seg button[aria-pressed=true]{background:var(--navy);color:#fff}
+.fun{display:flex;flex-direction:column;align-items:stretch;margin-top:4px}
+.stage{background:var(--navy);color:#fff;border-radius:8px;padding:7px 12px;font-size:14px;font-weight:600;margin:0 auto;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.stage b{font-variant-numeric:tabular-nums}
+.move{display:flex;align-items:center;justify-content:center;gap:8px;padding:5px 0;font-size:13px;color:#374151}
+.bars{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px;align-items:end;height:120px;margin-top:6px;border-bottom:1px solid var(--line)}
+.bars span{display:block;background:var(--navy);border-radius:4px 4px 0 0;min-height:2px}
+.bars span:hover{background:var(--clay)}
+.axis{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px;font-size:11.5px;color:var(--muted);text-align:center;margin-top:4px}
+.presets{font-size:13px;color:#374151;margin:8px 0 0;background:var(--paper);border-radius:10px;padding:10px 14px}
+.presets div{display:flex;justify-content:space-between;gap:10px;padding:2px 0}
+.presets b{font-variant-numeric:tabular-nums;color:var(--navy)}
+.src{font-size:12.5px;color:var(--muted);margin:8px 0 0}
+[hidden]{display:none!important}
+@media (max-width:860px){.layout{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:700px){.steps{grid-template-columns:1fr}}
+@media (max-width:520px){.seg{display:grid;grid-template-columns:1fr 1fr;border-radius:12px;width:100%}.seg.three{grid-template-columns:1fr 1fr 1fr}.seg button{border-radius:9px;font-size:13px;padding:6px 8px}.grid2,.tiles{grid-template-columns:1fr}.wi .c3{display:none}.wi th.n{white-space:normal}.axis{font-size:10px}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+
+.yn{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid #F0EEEA;font-size:14px;color:#374151}
+.yn:last-child{border-bottom:0}
+.yn select{min-height:36px;padding:6px 8px}
+.route{background:var(--navy);color:#fff;border-radius:10px;padding:12px 14px}
+.route .k{font-size:13px;color:#D5DBE6}
+.route .v{font-size:22px;font-weight:700;line-height:1.25}
+.plan{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.plan li{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:#3A3F4B}
+.plan .num{flex:none;width:22px;height:22px;border-radius:50%;background:var(--clay);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.chk{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:8px 0;border-bottom:1px solid #F0EEEA;font-size:14px}
+.chk:last-child{border-bottom:0}
+.chk b{color:var(--navy)}
+.chk .ans{font-weight:600;white-space:nowrap}
+.chk .yes{color:var(--navy)}
+.chk .yes::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--clay);margin-right:6px}
+.chk .no{color:var(--muted)}
+.chart{width:100%;height:auto;display:block;margin-top:6px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:#374151;margin-top:6px}
+.person{background:var(--paper);border-radius:10px;padding:12px 14px;margin-top:14px;font-size:14px;color:#3A3F4B}
+.person .k{font-size:13px;color:var(--muted)}
+.person .v{font-size:22px;font-weight:700;color:var(--navy);line-height:1.25}
+.person p{margin:6px 0 0}
+details.quotes{margin-top:4px}
+details.quotes summary{cursor:pointer;font-weight:600;color:var(--navy);font-size:14px;margin:8px 0}
+.legend span::before{content:"";display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle;background:var(--c)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="brand">
+    <div class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9s1.3-6.4 3.8-9z"/></svg></div>
+    <h1>Global Hiring Planner</h1>
+    <span class="tag">Free tool</span>
+  </div>
+  <a class="gh" href="https://github.com/nazia-a11y/marketing-ai-tools/tree/main/hiring" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M14 4l-4 16"/></svg>View the code on GitHub</a>
+</header>
+
+<p class="lead">Hiring in a new country? You can employ people through an employer of record, which employs them for you, or set up your own local company. Pick a country, a salary and how many people you need. This tool shows what each person really costs, which route fits, when to switch, and what each route costs over 24 months, then asks Claude for a plain-English review.</p>
+
+<ol class="steps" aria-label="How to use it">
+  <li><span class="num">1</span><span><b>Describe the move</b>The country, the salary, how many people you plan to hire and how soon.</span></li>
+  <li><span class="num">2</span><span><b>Answer the checks</b>A few yes or no questions on how the team will work and what you plan locally.</span></li>
+  <li><span class="num">3</span><span><b>Read your route</b>See the recommended route and timeline, the costs and the reasons, then ask Claude to review it.</span></li>
+</ol>
+
+<div class="layout">
+<section class="card" aria-labelledby="inh">
+  <h2 id="inh">Your plans</h2>
+  <p class="sub">The answers are an example to show how it works. Change any of them and the results update as you go.</p>
+  <form id="f" novalidate>
+    <div class="sect"><span class="num">1</span><h3>Where you are expanding</h3></div>
+    <div class="grid2">
+      <label>Country<select name="country">
+        <option value="uk">United Kingdom</option><option value="ie">Ireland</option><option value="de" selected>Germany</option><option value="fr">France</option><option value="nl">Netherlands</option>
+        <option value="es">Spain</option><option value="pl">Poland</option><option value="sg">Singapore</option><option value="au">Australia</option><option value="ca">Canada (Ontario)</option>
+      </select></label>
+      <label><span id="sallabel">Average salary a year</span><input name="salary" type="number" min="1" step="1000"><span class="hint" id="salhint">Gross pay for one person, before employer costs.</span></label>
+      <label id="langrow">Does your team work in the local language?<select name="local_language"><option value="no">No</option><option value="yes">Yes</option></select></label>
+      <label id="citrow" hidden>Are the hires Singapore citizens or permanent residents?<select name="citizens"><option value="yes">Yes</option><option value="no">No</option></select></label>
+    </div>
+    <p class="hint" id="countryhint" style="margin:0 0 4px"></p>
+
+    <div class="group">
+      <div class="sect"><span class="num">2</span><h3>Your hiring plan</h3></div>
+      <div class="grid2">
+        <label>People needed now<input name="now" type="number" min="0" step="1" value="3"></label>
+        <label>People in 12 months<input name="m12" type="number" min="0" step="1" value="10"></label>
+        <label>People in 24 months<input name="m24" type="number" min="0" step="1" value="20"></label>
+        <label>How soon you need the first hire<select name="urgency"><option value="month">Within a month</option><option value="soon" selected>In 1 to 3 months</option><option value="later">In 3 months or more</option></select></label>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="sect"><span class="num">3</span><h3>How they will work</h3></div>
+      <div class="yn"><span>Will they work only for you, full-time, under your direction?</span><select name="exclusive"><option value="yes">Yes</option><option value="no">No</option></select></div>
+    </div>
+
+    <div class="group">
+      <div class="sect"><span class="num">4</span><h3>Risk checks</h3></div>
+      <div class="yn"><span>Will anyone sign or negotiate contracts, or close sales locally?</span><select name="risk_sales"><option value="no">No</option><option value="yes">Yes</option></select></div>
+      <div class="yn"><span>Will anyone run the local operation, such as a country manager?</span><select name="risk_manager"><option value="no">No</option><option value="yes">Yes</option></select></div>
+      <div class="yn"><span>Do you need local licences, contracts in your own name, public tenders or local data storage?</span><select name="risk_licences"><option value="no">No</option><option value="yes">Yes</option></select></div>
+      <div class="yn"><span>Are you in a regulated sector, such as life sciences, medtech or financial services?</span><select name="risk_regulated"><option value="no">No</option><option value="yes">Yes</option></select></div>
+    </div>
+
+    <div class="group">
+      <div class="sect"><span class="num">5</span><h3>Your plans</h3></div>
+      <div class="yn"><span>Do you plan a permanent local presence within 12 to 18 months?</span><select name="plan_permanent"><option value="yes">Yes</option><option value="no">No</option></select></div>
+      <div class="yn"><span>Is this part of an acquisition or carve-out?</span><select name="ma"><option value="no">No</option><option value="yes">Yes</option></select></div>
+    </div>
+
+    <div class="group">
+      <div class="sect"><span class="num">6</span><h3>Costs</h3></div>
+      <p class="hint" style="margin:0" id="costline"></p>
+      <details class="quotes" id="quotes">
+        <summary>Use your own quotes</summary>
+        <div class="grid2">
+          <label>Employer of record fee per person a month<input name="fee" type="number" min="1" step="5"></label>
+          <label>Setting up your own company (one-off)<input name="setup" type="number" min="0" step="500"></label>
+          <label>Running your own company a month<input name="running" type="number" min="0" step="100"><span class="hint">Accounting, filings, registered office and admin, before salaries.</span></label>
+          <label>Payroll per person a month<input name="payroll" type="number" min="0" step="5"><span class="hint">On your own company.</span></label>
+        </div>
+      </details>
+    </div>
+  </form>
+</section>
+
+<div style="display:flex;flex-direction:column;gap:20px">
+<section class="card" aria-labelledby="resh">
+  <h2 id="resh">Your recommended route</h2>
+  <p class="sub" id="ressub"></p>
+  <div class="route" id="routebox"></div>
+  <ol class="plan" id="plan"></ol>
+  <div class="person" id="person"></div>
+  <h3 style="margin-top:20px">Route costs over 24 months, on top of pay</h3>
+  <div class="tiles" id="tiles" style="margin-bottom:8px"></div>
+  <svg class="chart" id="chart" viewBox="0 0 600 220" role="img" aria-label="Running total of costs for each route"></svg>
+  <div class="legend" id="legend"></div>
+</section>
+
+<section class="card" aria-labelledby="ch">
+  <h2 id="ch">The three checks</h2>
+  <p class="sub">Your own company is usually right when at least two of these point to it.</p>
+  <div id="checks"></div>
+  <div id="warns"></div>
+</section>
+</div>
+</div>
+
+<section class="card ai" aria-labelledby="aih" aria-live="polite">
+  <h2 id="aih">Claude's review</h2>
+  <div id="review"></div>
+  <div class="row"><button class="run" id="run" type="button">Ask Claude to review my route</button><span class="note" id="usage" style="margin:0">Free reviews are limited each day to keep costs down.</span></div>
+  <p class="err" id="err" role="alert" hidden></p>
+</section>
+
+<section class="card how">
+  <details>
+    <summary>How this works, and what it cannot tell you</summary>
+    <ol>
+      <li>Your hiring plan is turned into a headcount for each of the next 24 months, in a straight line from now to 12 months to 24 months.</li>
+      <li>The cost of each person is the salary plus the employer contributions set by law in that country for 2026, such as social security and required pensions. This is the same on either route, because an employer of record passes these costs on.</li>
+      <li>On top of pay, employer of record costs a monthly fee for each person. Your own company costs a one-off setup, a monthly running cost and payroll for each person. The tool fills these in with typical figures for the country, and you can replace them with real quotes.</li>
+      <li>The tool finds the month when your own company becomes cheaper to run, and checks whether switching then would save money over 24 months once setup is paid for. Setting up takes a few weeks to a few months depending on the country, so employer of record covers the gap.</li>
+      <li>It then applies three checks: cost, risk and strategy. Risks such as local sales staff, licences or country rules that limit employer of record can make your own company necessary earlier than the costs alone suggest.</li>
+      <li>All numbers are calculated in your browser with fixed formulas. They are never produced by AI. Claude is only asked to review the finished figures, and reviews are kept for 24 hours, so asking again about the same figures is free.</li>
+    </ol>
+    <p><b>Where the figures come from.</b> Employer contributions: 2026 rates and ceilings from government sources (HMRC, gov.ie, Deutsche Rentenversicherung and Techniker Krankenkasse, URSSAF rates published by CCI Paris, the Dutch government gazette, Seguridad Social, the official ZUS ceiling notice, the CPF Board, the ATO and Revenue NSW, the Government of Canada and the Government of Ontario), checked against PwC Worldwide Tax Summaries. They cover statutory costs only, not optional benefits, sector agreements or workplace accident insurance where the rate depends on the sector. Employer of record fees: about $599 per person a month, the common published starting fee, converted at rough exchange rates. Setup times and costs, and running costs: typical figures from local advisers and formation firms, so treat them as estimates. Country rules on employer of record: legal briefings from Taylor Wessing (Germany), Addleshaw Goddard (France), Le Global (Ireland), CMS (Netherlands), Lawants (Spain), Dudkowiak (Poland), Jackson Lewis (Singapore) and the Government of Ontario.</p>
+    <p>This is general guidance for planning, not legal or tax advice. Rules differ by country and change over time, so confirm the route with an adviser in the country before you act.</p>
+    <p>Sources: <a href="https://goglobal.com/blog/entity-establishment/at-what-stage-of-international-growth-should-a-company-transition-from-eor-to-its-own-entity/" target="_blank" rel="noopener">GoGlobal on moving from employer of record to your own company</a>, <a href="https://www.teamed.global/blog/eor-vs-entity-costs-complete-comparison-guide" target="_blank" rel="noopener">Teamed cost comparison</a>, <a href="https://workmotion.com/blog/eor-vs-entity-setup/" target="_blank" rel="noopener">WorkMotion decision framework</a>, <a href="https://www.lano.io/blog/cost-time-required-to-set-up-a-foreign-legal-entity" target="_blank" rel="noopener">Lano on setup cost and time</a>, <a href="https://www.thehrdirector.com/features/globalisation/permanent-establishment-risk-eor-doesnt-erase/" target="_blank" rel="noopener">The HR Director on tax presence risk</a>.</p>
+  </details>
+</section>
+
+<footer>Built by <a href="https://www.linkedin.com/in/naziamh/" target="_blank" rel="noopener" title="Nazia Hossain on LinkedIn">Nazia Hossain</a> as an applied AI project, using Claude by Anthropic.</footer>
+</div>
+
+<script>
+// Global Hiring Planner: the formulas, shared word for word by the page and the server.
+// Employer contribution rules are 2026 figures from government sources and the big accounting firms' tax guides.
+// Setup and running costs are typical estimates from local advisers; users can replace them with real quotes.
+const clampTo = (x, lo, hi) => Math.min(Math.max(x, lo), hi);
+const ROUTE_COUNTRIES = {
+  uk: {
+    name: 'United Kingdom', currency: 'GBP', english: true, salary: 60000,
+    fee: 475, payroll: 40, setup: 1500, running: 1000, setup_months: 1.5, setup_range: '2 to 6 weeks', entity: 'private limited company (Ltd)',
+    employer: (s) => 0.15 * Math.max(0, s - 5000) + 0.03 * clampTo(s - 6240, 0, 44030),
+    employer_text: 'National Insurance of 15% above £5,000 a year, and at least 3% pension on earnings between £6,240 and £50,270',
+    notes: ['No minimum share capital. A UK subsidiary of a larger group usually needs an audit.'],
+    eor: 'Employer of record is lawful in the UK. If people work under your direction, they are entitled to the same pay and conditions as your own staff after 12 weeks.',
+    eor_limit: null
+  },
+  ie: {
+    name: 'Ireland', currency: 'EUR', english: true, salary: 60000,
+    fee: 515, payroll: 45, setup: 3000, running: 1200, setup_months: 2.5, setup_range: '6 to 10 weeks', entity: 'private company limited by shares (LTD)',
+    employer: (s) => s * (s / 52 > 552 ? 0.1125 : 0.09) + 0.015 * Math.min(s, 80000),
+    employer_text: 'PRSI of 11.25% on all pay above €552 a week (9% below), and 1.5% auto-enrolment pension up to €80,000',
+    notes: ['The company needs a director living in the European Economic Area, or a bond of about €25,000 instead.'],
+    eor: 'A 2026 Workplace Relations Commission decision treated an employer of record as an employment agency, which needs a licence in Ireland. Check that the provider holds one.',
+    eor_limit: null
+  },
+  de: {
+    name: 'Germany', currency: 'EUR', english: false, salary: 70000,
+    fee: 515, payroll: 45, setup: 5000, running: 2000, setup_months: 2.5, setup_range: '6 to 12 weeks', entity: 'GmbH',
+    employer: (s) => 0.112 * Math.min(s, 101400) + 0.1055 * Math.min(s, 69750) + 0.011 * s + 0.021 * Math.min(s, 101400),
+    employer_text: 'pension, unemployment, health, care and accident insurance and the small-employer sick pay levy, about 25% of pay, falling above the ceilings of €69,750 and €101,400',
+    notes: ['A GmbH needs €25,000 share capital, with €12,500 paid in before registration.'],
+    eor: 'In Germany an employer of record must hold a labour leasing licence, and the same person can usually be placed with you for at most 18 months.',
+    eor_limit: 18
+  },
+  fr: {
+    name: 'France', currency: 'EUR', english: false, salary: 60000,
+    fee: 515, payroll: 45, setup: 4000, running: 2000, setup_months: 2, setup_range: '3 to 8 weeks', entity: 'SAS',
+    employer: (s) => 0.235 * s + 0.1466 * Math.min(s, 48060) + 0.0425 * Math.min(s, 192240) + 0.1478 * clampTo(s - 48060, 0, 336420),
+    employer_text: 'health, family, pension, unemployment and other contributions, about 40% to 45% of pay. Pay below about €65,600 gets a reduction this tool does not apply, so it slightly overstates cost there',
+    notes: ['Employers must also pay at least half of a company health plan, which is not included here.'],
+    eor: 'France restricts lending workers for profit. Employer of record usually runs through wage portage, which only suits skilled, autonomous people on temporary assignments, for up to 36 months.',
+    eor_limit: 18
+  },
+  nl: {
+    name: 'Netherlands', currency: 'EUR', english: false, salary: 65000,
+    fee: 515, payroll: 45, setup: 3500, running: 1500, setup_months: 2, setup_range: '3 to 8 weeks', entity: 'BV',
+    employer: (s) => 0.08 * s + 0.1713 * Math.min(s * 1.08, 79409),
+    employer_text: 'the 8% holiday allowance, plus unemployment, disability, return-to-work and health levies of about 17% up to €79,409',
+    notes: ['If your sector has a mandatory pension fund, its contributions are extra.'],
+    eor: 'People employed through a provider must get the same terms as your own staff. A licensing system for labour supply starts in 2027.',
+    eor_limit: null
+  },
+  es: {
+    name: 'Spain', currency: 'EUR', english: false, salary: 50000,
+    fee: 515, payroll: 45, setup: 4000, running: 550, setup_months: 2, setup_range: '4 to 10 weeks', entity: 'Sociedad Limitada (SL)',
+    employer: (s) => 0.3165 * Math.min(s, 61214.4) + 0.011 * Math.max(0, s - 61214.4),
+    employer_text: 'social security of about 31.65% of pay up to €61,214, and about 1.1% above it. Annual gross already includes the extra payments',
+    notes: ['A foreign company can also register directly as an employer in Spain without a subsidiary, which can suit one or two hires.'],
+    eor: 'Spanish law has no employer of record category. Supplying workers to another company is reserved for licensed temporary work agencies, so a long-term arrangement risks being treated as illegal worker supply.',
+    eor_limit: 0
+  },
+  pl: {
+    name: 'Poland', currency: 'PLN', english: false, salary: 240000,
+    fee: 2200, payroll: 185, setup: 8000, running: 1500, setup_months: 2, setup_range: '6 to 8 weeks, longer if the bank account is slow', entity: 'sp. z o.o.',
+    employer: (s) => 0.2198 * Math.min(s, 282600) + 0.0572 * Math.max(0, s - 282600),
+    employer_text: 'pension, disability, accident, Labour Fund and guaranteed benefits contributions, plus 1.5% workplace pension, about 22% up to PLN 282,600',
+    notes: ['An sp. z o.o. needs PLN 5,000 share capital.'],
+    eor: 'If an employer of record is set up as temporary agency work, the same person can be placed with you for at most 18 months in any 36. From July 2026 the labour inspectorate can also reclassify contracts as employment.',
+    eor_limit: 18
+  },
+  sg: {
+    name: 'Singapore', currency: 'SGD', english: true, salary: 120000,
+    fee: 780, payroll: 65, setup: 3000, running: 1000, setup_months: 1, setup_range: '1 to 4 weeks', entity: 'private limited company (Pte Ltd)',
+    employer: (s, i) => (i.citizens ? 0.17 * Math.min(s, 102000) : 0) + Math.min(0.0025 * s / 12, 11.25) * 12,
+    employer_text: 'CPF of 17% up to S$102,000 for citizens and permanent residents, and the Skills Development Levy for everyone',
+    notes: ['The company needs a resident director and a company secretary. Running costs include a nominee director.'],
+    eor: 'Since 2024 an employer of record cannot sponsor work passes in Singapore, so hiring people who need an Employment Pass needs your own company.',
+    eor_limit: null
+  },
+  au: {
+    name: 'Australia', currency: 'AUD', english: true, salary: 130000,
+    fee: 910, payroll: 75, setup: 5000, running: 1200, setup_months: 1.5, setup_range: '2 to 6 weeks', entity: 'proprietary company (Pty Ltd)',
+    employer: (s) => 0.12 * Math.min(s, 270830),
+    employer_text: 'superannuation of 12% up to A$270,830. Payroll tax (5.45% in New South Wales) only applies once total wages pass A$1.2 million, and is added for your team when it does',
+    payroll_tax: { rate: 0.0545, threshold: 1200000 },
+    notes: ['The company needs a director who lives in Australia. A subsidiary usually needs audited accounts unless the group is small.'],
+    eor: 'Employer of record can count as labour hire. Victoria, Queensland and the ACT require labour hire licences.',
+    eor_limit: null
+  },
+  ca: {
+    name: 'Canada (Ontario)', currency: 'CAD', english: true, salary: 110000,
+    fee: 825, payroll: 70, setup: 5000, running: 1200, setup_months: 1.5, setup_range: '4 to 6 weeks', entity: 'Ontario corporation',
+    employer: (s) => 0.0595 * Math.max(0, Math.min(s, 74600) - 3500) + 0.04 * Math.max(0, Math.min(s, 85000) - 74600) + 0.02282 * Math.min(s, 68900),
+    employer_text: 'CPP, CPP2 and employment insurance, which stop at their yearly maximums. Ontario Employer Health Tax (1.95%) only applies once total wages pass C$1 million, and is added for your team when it does',
+    payroll_tax: { rate: 0.0195, threshold: 1000000 },
+    notes: ['No minimum capital and no resident director needed for an Ontario corporation.'],
+    eor: 'Since July 2024 temporary help agencies placing workers in Ontario need a licence. Check that the provider holds one.',
+    eor_limit: null
+  }
+};
+const ROUTE_LANGUAGE_UPLIFT = 1.3;                      // running cost uplift when you do not work in the local language
+const ROUTE_MONTHS = 24;
+const ROUTE_URGENCY_MONTHS = { month: 1, soon: 3, later: 99 };
+
+// Headcount each month, in a straight line from now to 12 months to 24 months.
+function routeHeadcount(i) {
+  const out = [];
+  for (let m = 1; m <= ROUTE_MONTHS; m++) {
+    const h = m <= 12 ? i.now + (i.m12 - i.now) * (m / 12) : i.m12 + (i.m24 - i.m12) * ((m - 12) / 12);
+    out.push(Math.max(0, Math.round(h)));
+  }
+  return out;
+}
+
+function routeMaths(i) {
+  const r0 = (x) => Math.round(x);
+  const c = ROUTE_COUNTRIES[i.country] || ROUTE_COUNTRIES.uk;
+  const heads = routeHeadcount(i);
+
+  // The cost of employing one person, which is the same on either route.
+  const employer = c.employer(i.salary, i);
+  const perPerson = i.salary + employer;
+  const payTax = (h) => (c.payroll_tax ? c.payroll_tax.rate * Math.max(0, h * i.salary - c.payroll_tax.threshold) / 12 : 0);
+  let teamCost = 0;
+  for (const h of heads) teamCost += h * perPerson / 12 + payTax(h);
+
+  // Route costs, on top of pay.
+  const running = i.running * (c.english || i.local_language ? 1 : ROUTE_LANGUAGE_UPLIFT);
+  const eorMonth = (h) => h * i.fee;
+  const ownMonth = (h) => running + h * i.payroll;
+  const setupMonths = Math.ceil(c.setup_months);
+  const readyMonth = setupMonths + 1;              // earliest month your own company can employ people
+
+  // Month by month, when does your own company become cheaper to run than employer of record?
+  let switchMonth = null;
+  for (let m = 1; m <= ROUTE_MONTHS; m++) if (eorMonth(heads[m - 1]) >= ownMonth(heads[m - 1]) && heads[m - 1] > 0) { switchMonth = m; break; }
+  const crossHead = i.fee > i.payroll ? Math.ceil(running / (i.fee - i.payroll)) : null;
+
+  // Cost of a plan that uses employer of record until a given month, then your own company.
+  // People who need work passes in Singapore cannot be employed through employer of record, so nobody starts before your own company is ready.
+  const passes = i.country === 'sg' && !i.citizens;
+  const planCost = (sw) => {
+    const cum = [];
+    let t = 0;
+    for (let m = 1; m <= ROUTE_MONTHS; m++) {
+      if (sw !== null && m === Math.max(1, sw - setupMonths)) t += i.setup;
+      t += sw !== null && m >= sw ? ownMonth(heads[m - 1]) : (sw !== null && passes ? 0 : eorMonth(heads[m - 1]));
+      cum.push(r0(t));
+    }
+    return cum;
+  };
+  const stayEor = planCost(null);
+  const financialSwitch = switchMonth === null ? null : Math.max(switchMonth, readyMonth);
+  const financialPlan = financialSwitch === null ? null : planCost(financialSwitch);
+  const financial = financialPlan !== null && financialPlan[ROUTE_MONTHS - 1] < stayEor[ROUTE_MONTHS - 1];
+
+  // Country rules that limit employer of record count as a risk when people would stay on it beyond the limit.
+  const limitHit = c.eor_limit !== null && heads.some((h, k) => h > 0 && k + 1 > c.eor_limit);
+  // Risks that need your own company as soon as it can be ready, as opposed to a time limit you can plan around.
+  const urgentRisk = !!(i.risk_sales || i.risk_manager || i.risk_licences || i.risk_regulated || passes || (c.eor_limit === 0 && heads.some((h) => h > 0)));
+  const risk = urgentRisk || limitHit;
+  const strategic = !!(i.plan_permanent || i.ma);
+  const score = [financial, risk, strategic].filter(Boolean).length;
+
+  // Pick the plan.
+  let route, sw = null;
+  if (passes) {
+    route = 'own';
+    sw = readyMonth;
+  } else if (score >= 2) {
+    route = 'own';
+    // Switch as soon as possible for urgent risks, otherwise when your own company becomes cheaper,
+    // and never later than a country's limit on employer of record.
+    if (urgentRisk) sw = readyMonth;
+    else if (financial) sw = financialSwitch;
+    else sw = limitHit ? c.eor_limit : readyMonth;
+    if (limitHit) sw = Math.max(readyMonth, Math.min(sw, c.eor_limit));
+  } else {
+    route = 'eor';
+  }
+  const plan = route === 'own' ? planCost(sw) : stayEor;
+  const setupStart = sw === null ? null : Math.max(1, sw - setupMonths);
+  const needBy = ROUTE_URGENCY_MONTHS[i.urgency] || 3;
+  const bridge = route === 'own' && !passes && (heads[0] > 0 || needBy < readyMonth);
+
+  const steps = [];
+  if (route === 'own') {
+    if (setupStart === 1) steps.push('Start setting up your ' + c.entity + ' now. It usually takes ' + c.setup_range + ' in ' + c.name + '.');
+    else steps.push('Start setting up your ' + c.entity + ' in month ' + setupStart + '. It usually takes ' + c.setup_range + ' in ' + c.name + '.');
+    if (passes) steps.push('Your hires need work passes, which only your own company can sponsor, so they can start in month ' + sw + ', once it is ready.');
+    else if (bridge || sw > 1) steps.push('Use employer of record for your first hires' + (sw > 1 ? ' until month ' + sw : '') + ', so you can hire straight away.');
+    const why = urgentRisk ? ', as soon as it is ready, because of the risks flagged below'
+      : financial && sw === financialSwitch ? ', when it becomes cheaper to run than employer of record'
+      : limitHit && sw === c.eor_limit ? ', before the ' + c.eor_limit + '-month limit on employer of record in ' + c.name
+      : ', as soon as it is ready, for the permanent presence you plan';
+    if (!passes) steps.push('Move your team onto your own company in month ' + sw + why + '.');
+  } else {
+    steps.push('Hire through employer of record. You can start within days or weeks, with no setup cost.');
+    if (switchMonth !== null) steps.push('Review the decision in month ' + Math.max(1, switchMonth - setupMonths) + '. Your own company starts to cost less to run at about ' + (crossHead || heads[switchMonth - 1]) + ' people, around month ' + switchMonth + '.');
+    else steps.push('At this hiring plan, your own company does not become cheaper within 24 months. Review the decision if your plans grow.');
+    if (limitHit) steps.push('Plan for the ' + c.eor_limit + '-month limit on employer of record in ' + c.name + '. By month ' + c.eor_limit + ', move people onto your own company or end their placements.');
+  }
+
+  const flags = [];
+  if (c.eor_limit === 0) flags.push(c.eor + ' Take local legal advice before using employer of record for anything beyond a short, temporary need.');
+  else if (limitHit) flags.push(c.eor + ' Your plan keeps people in the country beyond month ' + c.eor_limit + ', so this counts as a risk.');
+  else flags.push(c.eor);
+  if (passes) flags.push('You said your hires are not Singapore citizens or permanent residents, so they will need work passes, which your own company must sponsor.');
+  if (i.risk_sales || i.risk_manager) flags.push('Staff who sign contracts, close local sales or run the local operation can create a taxable presence in that country, even through employer of record. Get tax advice for that country before they start.');
+  if (i.risk_licences) flags.push('Local licences, contracts in your own name, public tenders or local data storage usually need your own local company.');
+  if (i.risk_regulated) flags.push('Regulated sectors often need a local company from the start. Check the rules for that country early.');
+  if (i.ma) flags.push('Acquisitions and carve-outs come with fixed deadlines, so plan payroll and employment transfers in parallel with the deal.');
+  if (i.exclusive) flags.push('People who work only for you, full-time and under your direction, are usually treated as employees. Using contractors for them is risky, so employer of record or your own company is the safer choice.');
+  if (!c.english && !i.local_language) flags.push('Running a company where you do not work in the local language costs more, so the running cost has been raised by 30%.');
+
+  return {
+    country: c.name,
+    currency: c.currency,
+    salary: i.salary,
+    employer_costs_per_person: r0(employer),
+    cost_per_person_year: r0(perPerson),
+    team_cost_24_months: r0(teamCost),
+    route,
+    switch_month: sw,
+    setup_start_month: setupStart,
+    ready_month: readyMonth,
+    cost_crossover_month: switchMonth,
+    crossover_headcount: crossHead,
+    headcount: heads,
+    cumulative_stay_eor: stayEor,
+    cumulative_plan: plan,
+    total_stay_eor: stayEor[ROUTE_MONTHS - 1],
+    total_plan: plan[ROUTE_MONTHS - 1],
+    difference: plan[ROUTE_MONTHS - 1] - stayEor[ROUTE_MONTHS - 1],
+    running_cost_used: r0(running),
+    checks: { financial, risk, strategic, score },
+    country_rules: { eor_limit_months: c.eor_limit, limit_applies: limitHit, needs_work_pass_sponsor: passes },
+    steps,
+    flags
+  };
+}
+
+const API = 'https://marketing-tools-api.nazia-ed1.workers.dev';
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let money = (n) => n;
+let example = null;
+let lastReviewKey = null;
+
+const country = () => ROUTE_COUNTRIES[$('#f').country.value];
+
+// Picking a country fills in its currency, a typical salary and typical costs.
+function fillCountry() {
+  const f = $('#f'); const c = country();
+  f.salary.value = c.salary; f.fee.value = c.fee; f.setup.value = c.setup; f.running.value = c.running; f.payroll.value = c.payroll;
+  $('#langrow').hidden = c.english; $('#citrow').hidden = f.country.value !== 'sg';
+  $('#sallabel').textContent = `Average salary a year (${c.currency})`;
+  $('#salhint').textContent = { nl: 'Gross pay for one person, before the 8% holiday allowance.', au: 'Gross pay for one person, before superannuation.', es: 'Gross pay for one person, including the extra payments.' }[f.country.value] || 'Gross pay for one person, before employer costs.';
+  $('#countryhint').textContent = `Setting up a ${c.entity} usually takes ${c.setup_range}. ${c.notes.join(' ')}`;
+}
+
+function costLine() {
+  const f = $('#f'); const c = country();
+  const typical = [['fee', c.fee], ['setup', c.setup], ['running', c.running], ['payroll', c.payroll]].every(([k, v]) => Number(f[k].value) === v);
+  $('#costline').textContent = `${typical ? 'Using typical costs' : 'Using your own figures'} for ${c.name}: employer of record ${money(Number(f.fee.value))} a person a month, setting up your own company ${money(Number(f.setup.value))}, running it ${money(Number(f.running.value))} a month and payroll ${money(Number(f.payroll.value))} a person a month.`;
+}
+
+function readInput() {
+  const f = new FormData($('#f'));
+  const n = (k) => Number(f.get(k));
+  const yes = (k) => f.get(k) === 'yes';
+  // Key order matches the server, so saved reviews are found again.
+  return { country: f.get('country'), salary: n('salary'), local_language: yes('local_language'), citizens: yes('citizens'), now: n('now'), m12: n('m12'), m24: n('m24'), urgency: f.get('urgency'),
+    exclusive: yes('exclusive'), risk_sales: yes('risk_sales'), risk_manager: yes('risk_manager'), risk_licences: yes('risk_licences'), risk_regulated: yes('risk_regulated'),
+    plan_permanent: yes('plan_permanent'), ma: yes('ma'), fee: n('fee'), setup: n('setup'), running: n('running'), payroll: n('payroll') };
+}
+
+function check(i) {
+  const whole = (x) => Number.isInteger(x) && x >= 0 && x <= 10000;
+  if (!(i.salary >= 1000 && i.salary <= 10000000)) return 'Enter an average salary a year.';
+  if (![i.now, i.m12, i.m24].every(whole)) return 'Enter whole numbers of people, from 0 to 10,000.';
+  if (!(i.now + i.m12 + i.m24 > 0)) return 'Enter at least one person in your hiring plan.';
+  if (!(i.fee >= 1)) return 'Enter the employer of record fee per person.';
+  if ([i.setup, i.running, i.payroll].some((x) => !(x >= 0))) return 'The costs cannot be negative.';
+  return null;
+}
+
+function drawChart(m) {
+  const W = 600, H = 220, L = 58, R = 12, T = 12, B = 30;
+  const a = m.cumulative_stay_eor, b = m.cumulative_plan, same = m.route === 'eor';
+  const max = Math.max(...a, ...b, 1);
+  const x = (k) => L + (k / 23) * (W - L - R);
+  const y = (v) => T + (1 - v / max) * (H - T - B);
+  const line = (arr) => arr.map((v, k) => `${k ? 'L' : 'M'}${x(k).toFixed(1)},${y(v).toFixed(1)}`).join('');
+  const ticks = [0, max / 2, max].map((v) => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#ECE8E2"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="#6B6B6B">${money(v)}</text>`).join('');
+  const months = [1, 6, 12, 18, 24].map((mm) => `<text x="${x(mm - 1)}" y="${H - 10}" text-anchor="middle" font-size="11" fill="#6B6B6B">${mm}</text>`).join('');
+  const hit = a.map((v, k) => `<rect x="${x(k) - 11}" y="${T}" width="22" height="${H - T - B}" fill="transparent"><title>Month ${k + 1}: employer of record ${money(v)}${same ? '' : ', your plan ' + money(b[k])}, ${m.headcount[k]} people</title></rect>`).join('');
+  $('#chart').innerHTML = ticks + months + `<path d="${line(a)}" fill="none" stroke="#B07A5A" stroke-width="2" stroke-linejoin="round"/>` +
+    (same ? '' : `<path d="${line(b)}" fill="none" stroke="#1C2B4A" stroke-width="2" stroke-linejoin="round"/>`) + hit;
+  $('#legend').innerHTML = `<span style="--c:#B07A5A">Employer of record throughout</span>` + (same ? '' : `<span style="--c:#1C2B4A">Your recommended plan</span>`) + `<span style="color:#6B6B6B">Month 1 to 24</span>`;
+}
+
+function renderNumbers() {
+  const i = readInput();
+  const c = country();
+  money = (n) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: c.currency, maximumFractionDigits: 0 }).format(n);
+  costLine();
+  const problem = check(i);
+  if (problem) {
+    $('#ressub').textContent = problem;
+    ['#routebox', '#plan', '#person', '#tiles', '#chart', '#legend', '#checks', '#warns'].forEach((s) => { $(s).innerHTML = ''; });
+    return null;
+  }
+  const m = routeMaths(i);
+  $('#ressub').textContent = `For ${c.name}, growing from ${i.now} to ${i.m24} people over 24 months.`;
+  $('#routebox').innerHTML = m.route === 'own'
+    ? `<div class="k">Recommended route</div><div class="v">Employer of record first, then your own company from month ${m.switch_month}</div>`
+    : `<div class="k">Recommended route</div><div class="v">Employer of record for now</div>`;
+  $('#plan').innerHTML = m.steps.map((s, k) => `<li><span class="num">${k + 1}</span><span>${esc(s)}</span></li>`).join('');
+  $('#person').innerHTML = `<div class="k">What one person costs a year</div><div class="v">${money(m.cost_per_person_year)}</div>
+    <p>Salary ${money(i.salary)} plus employer costs of ${money(m.employer_costs_per_person)} (${Math.round(m.employer_costs_per_person / i.salary * 100)}%): ${esc(c.employer_text)}.</p>
+    <p>Pay and employer costs for your whole team over 24 months come to about ${money(Math.round(m.team_cost_24_months / 1000) * 1000)}. This is the same on either route.</p>`;
+  const tile = (k, v, s) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+  const diff = m.difference;
+  $('#tiles').innerHTML =
+    tile('Employer of record throughout', money(m.total_stay_eor), 'Total over 24 months') +
+    (m.route === 'own'
+      ? tile(diff <= 0 ? 'Saving with your plan' : 'Extra cost of your plan', money(Math.abs(diff)), diff <= 0 ? `Your plan costs ${money(m.total_plan)} over 24 months` : 'The price of moving early to manage risk')
+      : tile('Your own company becomes cheaper at', m.crossover_headcount ? `${m.crossover_headcount} people` : 'Not reached', m.cost_crossover_month ? `Around month ${m.cost_crossover_month} on your plan` : 'Not within 24 months on your plan'));
+  drawChart(m);
+  const row = (name, q, v) => `<div class="chk"><span><b>${name}</b><br><span class="hint">${q}</span></span><span class="ans ${v ? 'yes' : 'no'}">${v ? 'Points to own company' : 'Points to employer of record'}</span></div>`;
+  $('#checks').innerHTML =
+    row('Cost', 'Would switching to your own company save money over 24 months, after setup?', m.checks.financial) +
+    row('Risk', 'Would staying on employer of record create tax, regulatory or contract risk?', m.checks.risk) +
+    row('Strategy', 'Do your plans need a permanent local presence soon?', m.checks.strategic) +
+    `<p class="note">${m.checks.score} of 3 point to your own company.</p>`;
+  $('#warns').innerHTML = m.flags.map((w) => `<p class="warn">${esc(w)}</p>`).join('');
+  return i;
+}
+
+function renderReview(d, isExample) {
+  const r = d.review;
+  const when = new Date(d.run_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  $('#review').innerHTML = `<div class="banner">${isExample ? 'Example review of the figures shown when the page opens. ' : ''}Written by Claude on ${when}${d.cached ? ' (saved from the last 24 hours)' : ''}.</div>
+    <p>${esc(r.summary)}</p>
+    <h3>What is driving the route</h3><p>${esc(r.driver)}</p>
+    <h3>Risks</h3><ul>${r.risks.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+    <h3>What to confirm with an adviser</h3><ul>${r.confirm.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+}
+
+const keyOf = (i) => JSON.stringify(i);
+
+function refresh() {
+  const i = renderNumbers();
+  $('#err').hidden = true;
+  const k = i ? keyOf(i) : null;
+  if (k && k === lastReviewKey) return;
+  if (example && k === keyOf(example.input)) { renderReview(example, true); return; }
+  $('#review').innerHTML = `<p class="note" style="margin:0 0 14px">${i ? 'Your figures have changed. Ask Claude for a review of this route.' : 'Fix the figures above to ask for a review.'}</p>`;
+  lastReviewKey = null;
+}
+
+async function refreshUsage() {
+  try {
+    const u = await (await fetch(API + '/api/usage?tool=route')).json();
+    const left = Math.min(u.remaining_for_you, u.remaining_today);
+    $('#usage').textContent = left > 0 ? `You have ${left} free review${left === 1 ? '' : 's'} left today.` : 'No free reviews left today. The route above still works in full.';
+  } catch { /* keep default note */ }
+}
+
+$('#f').addEventListener('input', refresh);
+$('#f').addEventListener('change', (e) => { if (e.target.name === 'country') fillCountry(); refresh(); });
+$('#run').addEventListener('click', async () => {
+  const i = renderNumbers();
+  const showErr = (msg) => { $('#err').textContent = msg; $('#err').hidden = false; };
+  if (!i) return showErr(check(readInput()));
+  if (example && keyOf(i) === keyOf(example.input)) return showErr('This is the example review. Change any answer to get a review of your own plans.');
+  const btn = $('#run');
+  $('#err').hidden = true;
+  btn.disabled = true; btn.innerHTML = '<span class="spinner" aria-hidden="true"></span>Claude is reviewing your route…';
+  try {
+    const res = await fetch(API + '/api/route', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(i) });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || 'Something went wrong.');
+    renderReview(d, false);
+    lastReviewKey = keyOf(i);
+  } catch (x) {
+    showErr(x.message || 'The review could not be written. Please try again later.');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Ask Claude to review my route';
+    refreshUsage();
+  }
+});
+
+fillCountry();
+refresh();
+fetch('example.json').then((r) => (r.ok ? r.json() : null)).then((d) => { if (d) { example = d; refresh(); } }).catch(() => {});
+refreshUsage();
+</script>
+</body>
+</html>
