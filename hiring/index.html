@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Global Hiring Planner</title>
 <meta name="description" content="Pick a country, a salary and a hiring plan to see the true cost of each hire, whether to use employer of record or your own local company, when to switch, and a plain-English review from Claude.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Inter:wght@400;500;600&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&family=Schibsted+Grotesk:wght@600;700&display=swap">
 <style>
 :root{--navy:#1C2B4A;--navy-d:#152138;--navy-2:#2B3D63;--clay:#B07A5A;--clay-d:#9A6649;--clay-tint:#F5ECE5;--paper:#F6F3EE;--card:#FFFFFF;--ink:#1F2430;--soft:#4A5060;--muted:#7A7F8A;--line:#E6E0D7;--mist:#EEF1F6;--blue:#3E5A8A;--serif:'Newsreader',Georgia,serif}
 *{box-sizing:border-box}
@@ -194,6 +194,74 @@ footer{border-top:1px solid var(--line);margin-top:64px;padding:22px 0 40px;font
   .timeline li{grid-template-columns:72px minmax(0,1fr)}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+
+/* Demand Gen Digital brand layer. Look only: no logic changes. */
+:root{--navy:#E9EFED;--navy-d:#0F1B20;--navy-2:#7DD0C1;--clay:#F5B52E;--clay-d:#F5B52E;--clay-tint:#33291A;--paper:#0F1B20;--card:#16242A;--ink:#E9EFED;--soft:#B7C4C8;--muted:#9DAEB4;--line:#2A3A40;--mist:#16332F;--blue:#5CC0AE;--serif:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace;--spruce:#5CC0AE;--spruce-hi:#7DD0C1;--input:#3A4C53;color-scheme:dark}
+body{font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;background:var(--paper)}
+a{color:var(--spruce)}a:hover{color:var(--spruce-hi)}
+.top{background:var(--paper)}
+.brandwrap{display:flex;flex-direction:column;gap:2px}
+.brand{font-family:var(--serif);font-weight:700;font-size:17px;color:var(--ink)}
+.mark{background:transparent;border:1px solid var(--line);border-radius:4px;width:32px;height:32px}
+.mark svg{stroke:var(--spruce)}
+.byline{margin:0 0 0 42px;font-size:13px;color:var(--muted);line-height:1.3}
+.byline a{color:var(--ink);text-decoration-color:var(--spruce);text-underline-offset:3px}
+.navlinks a{color:var(--muted)}.navlinks a:hover{color:var(--ink)}
+.navlinks .code{border:1px solid var(--spruce);border-radius:2px;color:var(--spruce)}
+.navlinks .code:hover{background:var(--spruce);color:#0F1B20}
+.nav{height:76px}
+.hero h1{font-weight:700;letter-spacing:-.02em}
+.hero h1 em{font-style:normal;color:var(--spruce)}
+.hero .lede,.refhead p{color:var(--muted)}
+.refhead h2{font-weight:700}
+.quick{background:var(--card);border:1px solid var(--line);border-radius:4px}
+.quick label{color:var(--muted)}
+.qctl{background:var(--paper);color:var(--ink);border:1px solid var(--input);border-radius:2px}
+.qctl:focus-within,.cctl:focus-within,.stp:focus-within{border-color:var(--spruce);box-shadow:0 0 0 1px var(--spruce)}
+.qctl select,.qctl input,.cctl input{color:var(--ink)}
+.qctl select option{background:#16242A;color:#E9EFED}
+.qctl button,.stp button{background:var(--mist);color:var(--spruce);border-radius:2px}
+.qctl button:hover,.stp button:hover{background:#1E443E}
+.seg,.quick .seg{background:var(--paper);border:1px solid var(--input);border-radius:2px}
+.seg label,.quick .seg label{color:var(--muted);border-radius:2px}
+.seg input:checked+label,.quick .seg input:checked+label{background:var(--spruce);color:#0F1B20;box-shadow:none}
+.seg input:focus-visible+label,.opt input:focus-visible+label,button:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 2px #0F1B20,0 0 0 4px #5CC0AE}
+.answer{background:var(--card);border:1px solid var(--line);border-radius:4px;box-shadow:0 30px 60px -24px rgba(0,0,0,.6)}
+.answer h2{font-weight:700;color:var(--ink)}
+.fig .v,.stp input,.timeline b{font-family:var(--mono);font-weight:500;letter-spacing:-.02em}
+.fig .v{color:var(--ink)}
+.fig .v.good{color:var(--clay)}
+.hnotes{background:var(--paper);border-radius:4px}
+.hnotes li::before,.shaped li::before{background:var(--spruce);border-radius:1px}
+.bar{background:var(--card);border-top-color:var(--clay);box-shadow:0 10px 28px -10px rgba(0,0,0,.6)}
+.bar .h{font-weight:700;color:var(--ink)}
+.bar a{background:var(--spruce);color:#0F1B20;border-radius:2px}
+.bar a:hover{background:var(--spruce-hi);color:#0F1B20}
+.sh h2{font-weight:700}
+.card{background:var(--card);border-color:var(--line);border-radius:4px;box-shadow:none}
+.card h3{font-family:var(--serif)}
+.stp,.cctl{border-color:var(--input);border-radius:2px;background:var(--paper)}
+.opt label::before{background:var(--paper);border-color:var(--input);border-radius:2px}
+.opt input:checked+label::before{background:var(--spruce) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-5' fill='none' stroke='%230F1B20' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat;border-color:var(--spruce)}
+.reset{color:var(--spruce)}
+.tag{border-radius:2px;font-family:var(--mono);font-weight:500;font-size:11.5px}
+.tag.own{background:var(--mist);color:var(--spruce)}
+.tag.eor{background:#33291A;color:#F5C96B}
+.rule{background:#33291A;color:#F5D79A;border-radius:4px}
+.review{background:var(--card);border:1px solid var(--line);border-radius:4px}
+.review h2{font-weight:700}
+.review .intro,.usage{color:var(--muted)}
+.review .body{background:var(--paper);color:var(--ink);border-radius:4px}
+.review .body h4{font-family:var(--serif);color:var(--ink)}
+button.run{background:var(--spruce);color:#0F1B20;border-radius:2px}
+button.run:hover{background:var(--spruce-hi)}
+.spinner{border-color:currentColor;border-right-color:transparent}
+.err{color:#F2A79C}
+footer .in{display:flex;flex-direction:column;align-items:center;gap:8px}
+footer .dgd{display:inline-flex;align-items:center;gap:8px;font-family:var(--serif);font-weight:600;font-size:13px;color:var(--muted)}
+.byline{display:flex;align-items:center;gap:7px}
+.byline .avatar{width:22px;height:22px;border-radius:50%;object-fit:cover;border:1px solid #2A3A40;flex:none}
+@media (max-width:600px){.byline{margin-left:0}.nav{height:auto;padding:12px 0}}
 </style>
 </head>
 <body>
@@ -202,7 +270,7 @@ footer{border-top:1px solid var(--line);margin-top:64px;padding:22px 0 40px;font
 <div class="top" id="top">
   <div class="in">
     <nav class="nav">
-      <a class="brand" href="#top"><span class="mark"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9s1.3-6.4 3.8-9z"/></svg></span>Global Hiring Planner</a>
+      <div class="brandwrap"><a class="brand" href="#top"><span class="mark"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9s1.3-6.4 3.8-9z"/></svg></span>Global Hiring Planner</a><p class="byline"><img class="avatar" src="nazia.jpg" alt="" width="22" height="22">Built by <a href="https://www.linkedin.com/in/naziamh/" target="_blank" rel="noopener" title="Nazia Hossain on LinkedIn">Nazia Hossain</a></p></div>
       <div class="navlinks"><a href="#refine">Fine-tune</a><a href="#why">Why this route</a><a href="#method">Method</a><a class="code" href="https://github.com/nazia-a11y/marketing-ai-tools/tree/main/hiring" target="_blank" rel="noopener">View the code</a></div>
     </nav>
 
@@ -233,7 +301,7 @@ footer{border-top:1px solid var(--line);margin-top:64px;padding:22px 0 40px;font
         <h2 id="headline"></h2>
         <p class="why" id="reason"></p>
         <div class="routemap"><svg id="routemap" viewBox="0 0 560 150" role="img" aria-label="Timeline of your route over 24 months"></svg></div>
-        <div class="legend"><span style="--c:var(--clay)">Employer of record</span><span id="lg-own" style="--c:var(--navy)">Your own company</span><span id="lg-set" style="--c:repeating-linear-gradient(90deg,var(--navy) 0 4px,transparent 4px 7px)">Setting up</span></div>
+        <div class="legend"><span style="--c:var(--clay)">Employer of record</span><span id="lg-own" style="--c:#5CC0AE">Your own company</span><span id="lg-set" style="--c:repeating-linear-gradient(90deg,#5CC0AE 0 4px,transparent 4px 7px)">Setting up</span></div>
         <div class="figs" id="figs"></div>
         <ul class="hnotes" id="hnotes"></ul>
         <p class="src">Worked out in your browser with fixed formulas and 2026 employer rates. No AI is used for these figures.</p>
@@ -349,7 +417,7 @@ footer{border-top:1px solid var(--line);margin-top:64px;padding:22px 0 40px;font
     </div>
   </section>
 </main>
-<footer><div class="in">Built by <a href="https://www.linkedin.com/in/naziamh/" target="_blank" rel="noopener" title="Nazia Hossain on LinkedIn">Nazia Hossain</a> as an applied AI project, using Claude by Anthropic.</div></footer>
+<footer><div class="in"><span class="dgd"><svg class="dgd-mark" viewBox="0 0 44 48" width="18" height="20" aria-hidden="true"><path fill="#5CC0AE" fill-rule="evenodd" d="M8 8H20A16 16 0 0 1 20 40H8Z M16 16V32H20A8 8 0 0 0 20 16Z"/><rect x="18" y="21" width="6" height="6" fill="#F5B52E"/></svg><span>A Demand Gen Digital tool</span></span><span>Nazia Hossain built this tool as an applied AI project. The review is written by Claude, from Anthropic.</span></div></footer>
 
 <script>
 // Global Hiring Planner: the formulas, shared word for word by the page and the server.
@@ -786,31 +854,31 @@ function drawRoute(m) {
   svg.setAttribute('viewBox', `0 0 ${W} 150`);
   const L = 14, R = W - 14, Y = 70, x = (mo) => L + ((mo - 1) / 23) * (R - L);
   const first = m.first_hire_month || 1, sw = m.switch_month;
-  let s = `<line x1="${L}" y1="${Y}" x2="${R}" y2="${Y}" stroke="#ECE6DD" stroke-width="8" stroke-linecap="round"/>`;
-  if (m.route === 'eor') s += `<line x1="${x(first)}" y1="${Y}" x2="${R}" y2="${Y}" stroke="#B07A5A" stroke-width="8" stroke-linecap="round"/>`;
+  let s = `<line x1="${L}" y1="${Y}" x2="${R}" y2="${Y}" stroke="#22333A" stroke-width="8" stroke-linecap="round"/>`;
+  if (m.route === 'eor') s += `<line x1="${x(first)}" y1="${Y}" x2="${R}" y2="${Y}" stroke="#F5B52E" stroke-width="8" stroke-linecap="round"/>`;
   else {
-    if (m.uses_employer_of_record && sw > first) s += `<line x1="${x(first)}" y1="${Y}" x2="${x(sw)}" y2="${Y}" stroke="#B07A5A" stroke-width="8" stroke-linecap="round"/>`;
-    s += `<line x1="${x(sw)}" y1="${Y}" x2="${R}" y2="${Y}" stroke="#1C2B4A" stroke-width="8" stroke-linecap="round"/>`;
-    if (m.setup_start_month < sw) s += `<line x1="${x(m.setup_start_month)}" y1="${Y + 18}" x2="${x(sw)}" y2="${Y + 18}" stroke="#1C2B4A" stroke-width="2" stroke-dasharray="4 3"/>`;
+    if (m.uses_employer_of_record && sw > first) s += `<line x1="${x(first)}" y1="${Y}" x2="${x(sw)}" y2="${Y}" stroke="#F5B52E" stroke-width="8" stroke-linecap="round"/>`;
+    s += `<line x1="${x(sw)}" y1="${Y}" x2="${R}" y2="${Y}" stroke="#5CC0AE" stroke-width="8" stroke-linecap="round"/>`;
+    if (m.setup_start_month < sw) s += `<line x1="${x(m.setup_start_month)}" y1="${Y + 18}" x2="${x(sw)}" y2="${Y + 18}" stroke="#5CC0AE" stroke-width="2" stroke-dasharray="4 3"/>`;
   }
   const lim = m.route === 'eor' && m.country_rules && m.country_rules.limit_applies ? m.country_rules.limit_month : null;
-  if (lim) s += `<line x1="${x(lim)}" y1="${Y - 14}" x2="${x(lim)}" y2="${Y + 14}" stroke="#A32D2D" stroke-width="1.5" stroke-dasharray="3 3"/><text x="${x(lim)}" y="${Y + 46}" text-anchor="middle" font-size="12" fill="#A32D2D">${m.country_rules.eor_limit_months}-month limit</text>`;
+  if (lim) s += `<line x1="${x(lim)}" y1="${Y - 14}" x2="${x(lim)}" y2="${Y + 14}" stroke="#F2A79C" stroke-width="1.5" stroke-dasharray="3 3"/><text x="${x(lim)}" y="${Y + 46}" text-anchor="middle" font-size="12" fill="#F2A79C">${m.country_rules.eor_limit_months}-month limit</text>`;
   const up = [], down = [];
   if (m.route === 'own') {
-    down.push({ mo: m.setup_start_month, t: 'Start setup', c: '#1C2B4A', hollow: true });
-    if (m.uses_employer_of_record) up.push({ mo: first, t: 'First hire', c: '#B07A5A' });
-    up.push({ mo: sw, t: m.uses_employer_of_record ? 'Move across' : 'First hire', c: '#1C2B4A' });
-  } else up.push({ mo: first, t: 'First hire', c: '#B07A5A' });
+    down.push({ mo: m.setup_start_month, t: 'Start setup', c: '#5CC0AE', hollow: true });
+    if (m.uses_employer_of_record) up.push({ mo: first, t: 'First hire', c: '#F5B52E' });
+    up.push({ mo: sw, t: m.uses_employer_of_record ? 'Move across' : 'First hire', c: '#5CC0AE' });
+  } else up.push({ mo: first, t: 'First hire', c: '#F5B52E' });
   up.forEach((p, k) => { p.row = k > 0 && Math.abs(x(p.mo) - x(up[k - 1].mo)) < 88 ? 1 : 0; });
   const anchor = (cx) => (cx < 44 ? 'start' : cx > W - 44 ? 'end' : 'middle');
   up.forEach((p) => {
     const cx = x(p.mo), ty = Y - 34 - p.row * 30;
-    if (p.row) s += `<line x1="${cx}" y1="${ty + 6}" x2="${cx}" y2="${Y - 12}" stroke="#CFC8BD" stroke-width="1"/>`;
-    s += `<text x="${cx}" y="${ty}" text-anchor="${anchor(cx)}" font-size="13" font-weight="600" fill="#1F2430">${p.t}</text><text x="${cx}" y="${ty + 15}" text-anchor="${anchor(cx)}" font-size="12" fill="#7A7F8A">Month ${p.mo}</text>`;
+    if (p.row) s += `<line x1="${cx}" y1="${ty + 6}" x2="${cx}" y2="${Y - 12}" stroke="#4A5D65" stroke-width="1"/>`;
+    s += `<text x="${cx}" y="${ty}" text-anchor="${anchor(cx)}" font-size="13" font-weight="600" fill="#E9EFED">${p.t}</text><text x="${cx}" y="${ty + 15}" text-anchor="${anchor(cx)}" font-size="12" fill="#9DAEB4">Month ${p.mo}</text>`;
   });
-  down.forEach((p) => { const cx = x(p.mo); s += `<text x="${cx}" y="${Y + 40}" text-anchor="${anchor(cx)}" font-size="13" font-weight="600" fill="#1F2430">${p.t}</text><text x="${cx}" y="${Y + 55}" text-anchor="${anchor(cx)}" font-size="12" fill="#7A7F8A">Month ${p.mo}</text>`; });
-  [...up, ...down].forEach((p) => { s += `<circle cx="${x(p.mo)}" cy="${Y}" r="9" fill="${p.hollow ? '#fff' : p.c}" stroke="${p.c}" stroke-width="3"/>`; });
-  [1, 6, 12, 18, 24].forEach((mo) => { s += `<text x="${x(mo)}" y="${Y + 78}" text-anchor="${mo === 1 ? 'start' : mo === 24 ? 'end' : 'middle'}" font-size="11.5" fill="#A6AAB2">${mo === 1 && W >= 420 ? 'Month 1' : mo}</text>`; });
+  down.forEach((p) => { const cx = x(p.mo); s += `<text x="${cx}" y="${Y + 40}" text-anchor="${anchor(cx)}" font-size="13" font-weight="600" fill="#E9EFED">${p.t}</text><text x="${cx}" y="${Y + 55}" text-anchor="${anchor(cx)}" font-size="12" fill="#9DAEB4">Month ${p.mo}</text>`; });
+  [...up, ...down].forEach((p) => { s += `<circle cx="${x(p.mo)}" cy="${Y}" r="9" fill="${p.hollow ? '#16242A' : p.c}" stroke="${p.c}" stroke-width="3"/>`; });
+  [1, 6, 12, 18, 24].forEach((mo) => { s += `<text x="${x(mo)}" y="${Y + 78}" text-anchor="${mo === 1 ? 'start' : mo === 24 ? 'end' : 'middle'}" font-size="11.5" fill="#6E7F86">${mo === 1 && W >= 420 ? 'Month 1' : mo}</text>`; });
   svg.innerHTML = s;
   $('#lg-own').hidden = m.route === 'eor'; $('#lg-set').hidden = !(m.route === 'own' && m.setup_start_month < sw);
 }
@@ -824,11 +892,11 @@ function drawChart(m) {
   const max = Math.max(...a, ...b, 1);
   const x = (k) => L + (k / 23) * (W - L - R), y = (v) => T + (1 - v / max) * (H - T - B);
   const line = (arr) => arr.map((v, k) => `${k ? 'L' : 'M'}${x(k).toFixed(1)},${y(v).toFixed(1)}`).join('');
-  const ticks = [0, max / 2, max].map((v) => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#EEEAE3"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end" font-size="11.5" fill="#7A7F8A">${money(v)}</text>`).join('');
-  const months = [1, 6, 12, 18, 24].map((mm) => `<text x="${x(mm - 1)}" y="${H - 10}" text-anchor="${mm === 1 ? 'start' : mm === 24 ? 'end' : 'middle'}" font-size="11.5" fill="#7A7F8A">Month ${mm}</text>`).join('');
+  const ticks = [0, max / 2, max].map((v) => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#22333A"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end" font-size="11.5" fill="#9DAEB4">${money(v)}</text>`).join('');
+  const months = [1, 6, 12, 18, 24].map((mm) => `<text x="${x(mm - 1)}" y="${H - 10}" text-anchor="${mm === 1 ? 'start' : mm === 24 ? 'end' : 'middle'}" font-size="11.5" fill="#9DAEB4">Month ${mm}</text>`).join('');
   const hit = a.map((v, k) => `<rect x="${x(k) - 14}" y="${T}" width="28" height="${H - T - B}" fill="transparent"><title>Month ${k + 1}: ${noEor ? 'your own company' : 'employer of record'} ${money(v)}${same ? '' : ', your plan ' + money(b[k])}, ${m.headcount[k] === 1 ? '1 person' : m.headcount[k] + ' people'}</title></rect>`).join('');
-  svg.innerHTML = ticks + months + `<path d="${line(a)}" fill="none" stroke="${noEor ? '#1C2B4A' : '#B07A5A'}" stroke-width="2.5" stroke-linejoin="round"/>` + (same ? '' : `<path d="${line(b)}" fill="none" stroke="#1C2B4A" stroke-width="2.5" stroke-linejoin="round"/>`) + hit;
-  $('#clegend').innerHTML = noEor ? `<span style="--c:#1C2B4A">Your own company</span>` : `<span style="--c:#B07A5A">Employer of record throughout</span>` + (same ? '' : `<span style="--c:#1C2B4A">Your plan</span>`);
+  svg.innerHTML = ticks + months + `<path d="${line(a)}" fill="none" stroke="${noEor ? '#5CC0AE' : '#F5B52E'}" stroke-width="2.5" stroke-linejoin="round"/>` + (same ? '' : `<path d="${line(b)}" fill="none" stroke="#5CC0AE" stroke-width="2.5" stroke-linejoin="round"/>`) + hit;
+  $('#clegend').innerHTML = noEor ? `<span style="--c:#5CC0AE">Your own company</span>` : `<span style="--c:#F5B52E">Employer of record throughout</span>` + (same ? '' : `<span style="--c:#5CC0AE">Your plan</span>`);
 }
 
 function renderNumbers() {
