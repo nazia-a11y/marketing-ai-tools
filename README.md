@@ -65,4 +65,4 @@ flowchart LR
 | `referral/index.html` | The Referral Revenue Calculator page |
 | `hiring/index.html` | The Global Hiring Planner page |
 
-Built by Nazia Hossain. See also [In-Market Signals](https://github.com/nazia-a11y/in-market-signals).
+Built by Nazia Hossain. See also [Intent Signals to Pipeline](https://github.com/nazia-a11y/in-market-signals).
