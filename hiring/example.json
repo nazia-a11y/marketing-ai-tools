@@ -31,12 +31,14 @@
     "team_cost_24_months": 1828925,
     "route": "own",
     "uses_employer_of_record": true,
+    "employer_of_record_available": true,
     "first_hire_month": 3,
     "switch_month": 7,
     "setup_start_month": 4,
     "ready_month": 4,
     "cost_crossover_month": 7,
     "crossover_headcount": 6,
+    "payback_month": 12,
     "headcount": [
       0,
       0,
@@ -118,6 +120,8 @@
     "total_stay_eor": 129265,
     "total_plan": 71085,
     "difference": -58180,
+    "best_own_company_saving": 58180,
+    "saving_threshold": 12927,
     "running_cost_used": 2600,
     "checks": {
       "financial": true,
@@ -128,15 +132,21 @@
     "country_rules": {
       "eor_limit_months": 18,
       "limit_applies": true,
-      "needs_work_pass_sponsor": false
+      "limit_month": 21,
+      "needs_work_pass_sponsor": false,
+      "portage_not_for_permanent_roles": false
     },
     "headline": "Employer of record first, then your own company from month 7",
-    "reason": "Your own company becomes cheaper to run once you reach about 6 people, around month 7.",
-    "money": "Saves about €58,180 over 24 months compared with employer of record, on top of pay.",
+    "reason": "From about 6 people (month 7) your own company costs less each month than employer of record fees. Switching in month 7 pays back the setup cost by month 12.",
+    "money": "You save about €58,200 over 24 months on fees and running costs, after paying for setup, compared with keeping everyone on employer of record, which the 18-month limit would not allow anyway. Salaries and employer taxes are the same on either route.",
     "notes": [
-      "People who work only for you under your direction are usually employees, so contractors are not a safe option.",
-      "You plan a permanent presence, which also points to your own company.",
+      "You plan a long-term presence, which also points to your own company.",
       "Running your own company costs 30% more here because you do not work in the local language."
+    ],
+    "hero_notes": [
+      "German law limits each person to 18 months placed with you, counted from each person's start date. Your first hires would reach it in month 21, so employer of record could not cover them for the full 24 months.",
+      "Running your own company costs 30% more here because you do not work in the local language.",
+      "You plan a long-term presence, which also points to your own company."
     ],
     "steps": [
       "Month 3: hire your first 3 people through employer of record.",
@@ -144,24 +154,22 @@
       "Month 7: move your team onto your own company."
     ],
     "flags": [
-      "In Germany an employer of record must hold a labour leasing licence, and the same person can usually be placed with you for at most 18 months. Your plan has people in the country beyond month 18, so this counts as a risk."
+      "In Germany an employer of record must hold a labour leasing licence, and the same person can usually be placed with you for at most 18 months. The limit runs from each person's start date, and your first hires reach it in month 21."
     ]
   },
   "review": {
-    "summary": "The recommended route is to hire the first three people through an employer of record from month 3, then move the team onto the company's own German GmbH from month 7. The GmbH is cheaper once the team reaches about six people, and the employer of record's 18-month limit would be exceeded by the plan's roles beyond month 18.",
-    "driver": "All three checks (financial, risk and strategic) point towards setting up the company's own local company, and the score is 3 out of 3. Over 24 months, the employer of record route adds €129,265 on top of pay, against €71,085 for the own company route, a saving of €58,180.",
+    "summary": "Use employer of record for your first hires, then move the team onto your own company from month 7, which is the recommended route for this plan. The switch pays back its setup cost by month 12 and saves €58,180 compared with keeping everyone on employer of record, which the 18 months per person limit would not allow for the full 24 months anyway.",
+    "driver": "Every check points to your own company, and the financial check is the main driver because your own company becomes cheaper each month from 6 people. The long-term presence you plan also supports the move, and the 18 months per person limit is reached in month 21.",
     "risks": [
-      "The employer of record's 18-month limit applies, and the plan keeps people in the country beyond month 18, so a GmbH or a different structure must be in place before then.",
-      "The GmbH must be ready by month 7, but setup usually takes 6 to 12 weeks from month 4, so there is little margin for delay.",
-      "Running the GmbH costs about 30% more because the company does not work in the local language, and this extra cost is already included in the plan figures."
+      "An employer of record in Germany must hold a labour leasing licence, so confirm that any provider you use holds one before your first hires start in month 3.",
+      "Your first hires would reach the 18 months per person limit in month 21, so they must be moved before then to stay compliant.",
+      "Running your own company costs 30% more because you do not work in the local language, which adds to the ongoing cost once you switch."
     ],
     "confirm": [
-      "Does the 18-month limit apply to each of the planned roles, and what is the correct transition point from the employer of record to the GmbH?",
-      "Can a GmbH be formed and registered for payroll within the 6 to 12 week window if setup starts in month 4, and what documents are needed from a non-German-speaking owner or managing director?",
-      "What employer obligations apply when staff move from the employer of record to the GmbH, including notice, continuity of service and any consultation requirements?",
-      "Are the German tax, social security and payroll registrations for the GmbH likely to be complete before the first payroll run in month 7?"
+      "Does the labour leasing licence requirement apply to every employer of record you would consider for these German hires?",
+      "Does the 18 months per person limit run from each person's start date, and how would it apply to the hires planned here?",
+      "How long does setting up your own company typically take in Germany, and is a move in month 7 realistic for this team?"
     ]
   },
-  "run_at": "2026-11-06T16:58:14.717Z",
-  "cached": false
+  "run_at": "2026-11-14T00:50:32.181Z"
 }
