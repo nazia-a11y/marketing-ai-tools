@@ -140,7 +140,7 @@ async function usage(request, env, tool) {
 
 // Cached results are free and do not count against any limit.
 async function runLimited(request, env, tool, input, work) {
-  const key = `cache:${tool}:v7:${await sha256(JSON.stringify(input))}`;
+  const key = `cache:${tool}:v14:${await sha256(JSON.stringify(input))}`; // v14: wording checked against the inputs, figures match the pages
   const cached = await env.STORE.get(key, 'json');
   if (cached) {
     await track(request, env, tool, 'cached');
@@ -232,19 +232,68 @@ function cleanVisibilityInput(raw) {
 }
 
 const placeName = (c) => (['United Kingdom', 'United States', 'Netherlands'].includes(c) ? `the ${c}` : c);
+// A category typed as "CRM category" or "the payroll market" reads better without the extra word.
+const bareCategory = (c) => c.replace(/^(the|a|an)\s+/i, '').replace(/\s+(category|market|sector|space|industry)$/i, '').trim() || c;
 
+// Fallback wording, used only if Claude's wording fails its checks. It reads correctly for plural
+// categories ("law firms"), singular ones ("CRM platform") and mass nouns ("accounting software").
 function questionsFor({ category, country, competitors }) {
+  const cat = bareCategory(category);
   const where = country === 'Global' ? '' : ` in ${placeName(country)}`;
-  const qs = [
-    `What are the best ${category}s${where}?`,
-    `Which ${category}${where} would you recommend for a mid-sized company, and why?`,
-    `I am comparing ${category}s${where}. Which companies should be on my shortlist?`,
-    `Who are the leading ${category}s${where} for enterprise customers?`
+  const plural = /[^s]s$/i.test(cat) && !/(ics|ss|us|is|ous)$/i.test(cat);
+  const qs = plural ? [
+    `What are the best ${cat}${where}?`,
+    `Which ${cat}${where} would you recommend for a mid-sized company, and why?`,
+    `I am comparing ${cat}${where}. Which ones should be on my shortlist?`,
+    `Who are the leading ${cat}${where} for enterprise customers?`
+  ] : [
+    `What are the best ${cat} options${where}?`,
+    `Which ${cat} provider would you recommend${where} for a mid-sized company, and why?`,
+    `I am comparing ${cat} options${where}. Which companies should be on my shortlist?`,
+    `Who are the leading ${cat} providers${where} for enterprise customers?`
   ];
   qs.push(competitors.length
-    ? `What are the best alternatives to ${competitors[0]} as a ${category}${where}?`
-    : `Which ${category}s${where} have the strongest reputation with customers?`);
+    ? `What are the best alternatives to ${competitors[0]}${where}?`
+    : plural ? `Which ${cat}${where} have the strongest reputation with customers?` : `Which ${cat} providers${where} have the strongest reputation with customers?`);
   return qs;
+}
+
+// Claude words the five buyer questions for this exact category, so they read naturally for any input.
+// The checks keep the questions fair: no brand of the visitor's, the right place, and the competitor only where it belongs.
+async function writeQuestions(env, input) {
+  const base = questionsFor(input);
+  const cat = bareCategory(input.category);
+  const where = input.country === 'Global' ? 'no particular country' : placeName(input.country);
+  try {
+    const msg = await claude(env, {
+      max_tokens: 800,
+      messages: [{
+        role: 'user',
+        content: `A buyer is researching "${cat}" (what they typed as a category; it may be a product, a service or a kind of company) for ${where}. Write five questions they would ask an AI assistant, one for each purpose below, in natural British English that is grammatical for this exact category (for example "the best accounting software", "the best payroll providers", "the best CRM platforms").
+1. Ask for the best options.
+2. Ask which one to recommend for a mid-sized company, and why.
+3. Say they are comparing options and ask which companies to shortlist.
+4. Ask who the leading providers are for enterprise customers.
+5. ${input.competitors.length ? `Ask for the best alternatives to ${input.competitors[0]}.` : 'Ask which providers have the strongest reputation with customers.'}
+${input.country === 'Global' ? 'Do not name a country.' : `Mention ${placeName(input.country)} in every question.`} Do not name any company${input.competitors.length ? ` except ${input.competitors[0]} in question 5` : ''}. Write without contractions. Each question ends with a question mark. Reply only with JSON: {"questions": ["...", "...", "...", "...", "..."]}`
+      }]
+    });
+    const qs = parseJsonLoose(textOf(msg)).questions;
+    const aliases = { 'United Kingdom': [/\b(united kingdom|britain)\b/i, /\bUK\b/], 'United States': [/\b(united states|america)\b/i, /\bUSA?\b/], 'Netherlands': [/\b(netherlands|dutch)\b/i] };
+    const country = input.country === 'Global' ? null : aliases[input.country] || [new RegExp(`\\b${input.country}\\b`, 'i')];
+    const names = [input.brand, ...input.competitors.slice(1)].map((n) => n.toLowerCase());
+    const ok = Array.isArray(qs) && qs.length === 5 && qs.every((q, k) => typeof q === 'string'
+      && q.length >= 15 && q.length <= 220 && /\?$/.test(q.trim())
+      && (!country || country.some((re) => re.test(q)))
+      && !names.some((n) => firstIndex(q, n) >= 0)
+      && (k < 4 || !input.competitors.length || firstIndex(q, input.competitors[0]) >= 0)
+      && (k === 4 || !input.competitors.length || firstIndex(q, input.competitors[0]) < 0));
+    if (ok) return qs.map((q) => clip(q, 220));
+    console.log('Questions rejected', JSON.stringify(qs).slice(0, 400));
+  } catch (e) {
+    if (e.publicMessage) throw e;
+  }
+  return base;
 }
 
 function namePattern(name) {
@@ -258,11 +307,47 @@ function firstIndex(text, name) {
   return m ? m.index + m[1].length : -1;
 }
 
+// The whole sentence around a brand mention, cleaned of Markdown, without cutting words or splitting at "Inc." or "4.5".
 function sentenceAround(text, idx) {
-  const start = Math.max(text.lastIndexOf('.', idx), text.lastIndexOf('\n', idx)) + 1;
-  let end = text.slice(idx).search(/[.\n]/);
-  end = end < 0 ? text.length : idx + end + 1;
-  return text.slice(start, end).replace(/[*#_`>]/g, '').trim().slice(0, 260);
+  const lineStart = text.lastIndexOf('\n', idx) + 1;
+  let lineEnd = text.indexOf('\n', idx);
+  if (lineEnd < 0) lineEnd = text.length;
+  let line = text.slice(lineStart, lineEnd);
+  let at = idx - lineStart;
+  if (/^\s*\|.*\|\s*$/.test(line)) {
+    // A table row: read it as a list of its cells.
+    const cells = line.split('|').map((c) => c.trim()).filter(Boolean);
+    const joined = cells.join(', ');
+    at = Math.max(0, joined.toLowerCase().indexOf(line.slice(at, at + 4).toLowerCase()));
+    line = joined;
+  }
+  // Sentence breaks: . ! or ? followed by a space and a capital letter, not after a short abbreviation or a single letter.
+  const breaks = [];
+  const re = /[.!?](?=\s+["'(*_]*[A-Z0-9])/g;
+  let m;
+  while ((m = re.exec(line))) {
+    const before = line.slice(Math.max(0, m.index - 4), m.index);
+    if (/(^|\s)(inc|ltd|co|corp|vs|etc|e\.g|i\.e|no|st|mr|ms|dr)$/i.test(before) || /(^|\s)[A-Z]$/.test(before)) continue;
+    breaks.push(m.index + 1);
+  }
+  const start = Math.max(0, ...breaks.filter((b) => b <= at));
+  const end = breaks.find((b) => b > at) || line.length;
+  let s = line.slice(start, end)
+    .replace(/^\s*(?:[-*•–]|\d+[.)])\s+/, '')        // list markers
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')         // links
+    .replace(/[*_`#>|]+/g, '')                        // emphasis, headings, table bars
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (s.length > 260) {
+    // Keep the part around the brand, cut on word boundaries and show the cut.
+    const pos = Math.max(0, s.toLowerCase().indexOf(line.slice(at, at + 3).toLowerCase()));
+    let from = Math.max(0, pos - 100);
+    from = from ? s.indexOf(' ', from) + 1 : 0;
+    let to = Math.min(s.length, from + 250);
+    if (to < s.length) to = s.lastIndexOf(' ', to);
+    s = (from ? '…' : '') + s.slice(from, to).replace(/[,;:\s]+$/, '') + (to < s.length ? '…' : '');
+  }
+  return s;
 }
 
 function scoreAnswers(answers, names, brand) {
@@ -273,8 +358,15 @@ function scoreAnswers(answers, names, brand) {
     found.forEach((f, rank) => { stats[f.n].mentions += 1; stats[f.n].positions.push(rank + 1); });
     const own = found.find((f) => f.n === brand);
     if (own && quotes.length < 3) {
-      const text = sentenceAround(a.text, own.i);
-      if (!quotes.some((q) => q.text === text)) quotes.push({ question: a.question, text });
+      // Use the first mention that sits in a real sentence, not a bare heading such as "**FreeAgent**".
+      const re = new RegExp(namePattern(brand).source, 'gi');
+      let m, text = '';
+      while ((m = re.exec(a.text))) {
+        const t = sentenceAround(a.text, m.index + m[1].length);
+        if (t.replace(/[^a-z]/gi, '').length - brand.replace(/[^a-z]/gi, '').length >= 20) { text = t; break; }
+      }
+      if (text && !/[.!?…)]$/.test(text)) text += '…';
+      if (text && !quotes.some((q) => q.text === text)) quotes.push({ question: a.question, text });
     }
   }
   const total = answers.length;
@@ -323,13 +415,13 @@ async function discoverBrands(env, answers, known, category) {
     max_tokens: 3000,
     messages: [{
       role: 'user',
-      content: `Below are several AI answers about ${category}s.\n\n${corpus}\n\nList every company or brand named in these answers as a ${category}, except these: ${known.join(', ') || 'none'}. Use the names exactly as written. Reply only with JSON: {"brands": ["..."]}`
+      content: `Below are several AI answers to questions about ${bareCategory(category)}.\n\n${corpus}\n\nList every company, product or brand that these answers put forward as an option for ${bareCategory(category)}, except these: ${known.join(', ') || 'none'}. Leave out review sites, analyst firms, publications, people, generic terms and product features. Use the names exactly as written. Reply only with JSON: {"brands": ["..."]}`
     }]
   });
   try {
     const t = (textOf(msg).match(/\{[\s\S]*\}/) || ['{}'])[0];
     const list = JSON.parse(t).brands;
-    return Array.isArray(list) ? [...new Set(list.map((b) => clip(b, 60)).filter(Boolean))].slice(0, 12) : [];
+    return Array.isArray(list) ? [...new Set(list.map((b) => clip(b, 60)).filter((b) => b && firstIndex(corpus, b) >= 0))].slice(0, 12) : [];
   } catch {
     return [];
   }
@@ -344,7 +436,7 @@ function domainsOf(answers) {
 }
 
 async function visibility(input, env) {
-  const questions = questionsFor(input);
+  const questions = await writeQuestions(env, input);
   const jobs = [];
   for (const q of questions) {
     for (let i = 0; i < REPEATS_NO_WEB; i++) jobs.push({ q, web: false });
@@ -356,7 +448,14 @@ async function visibility(input, env) {
 
   const known = [input.brand, ...input.competitors];
   const discovered = await discoverBrands(env, results, known, input.category);
-  const names = [...known, ...discovered.filter((d) => !known.some((k) => k.toLowerCase() === d.toLowerCase()))];
+  // One row per brand: drop a discovered name that is another listed brand plus a product word ("Sage Payroll"
+  // when "Sage" is listed) or the same name written differently ("Lohn & Gehalt", "Lohn+Gehalt").
+  const key = (n) => n.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const names = [...known];
+  for (const d of [...discovered].sort((x, y) => x.length - y.length)) {
+    if (names.some((k) => key(k) === key(d) || firstIndex(d, k) >= 0)) continue;
+    names.push(d);
+  }
 
   const model = scoreAnswers(noWeb, names, input.brand);
   const live = scoreAnswers(web, names, input.brand);
@@ -422,8 +521,8 @@ function cleanPlanInput(raw) {
   return out;
 }
 
-// Improve a rate by 5 points, or by 1 point when it is under 10%.
-const stepFor = (rate) => (rate < 10 ? 1 : 5);
+// Who controls each stage, as shown on the page.
+const PLAN_OWNERS = { lead_to_mql: 'Marketing', mql_to_sql: 'Marketing and sales', sql_to_opp: 'Sales', lead_to_opp: 'Marketing and sales', win_rate: 'Sales' };
 
 function planMaths(i) {
   const r = (x) => Math.round(x);
@@ -437,15 +536,24 @@ function planMaths(i) {
   const opps = counts[counts.length - 2];
   const cpl = i.channels.reduce((s, c) => s + (c.share / 100) * c.cpl, 0);
   const budget = leads * cpl;
+  // Same rule as the page's table: raise one stage at a time by 5 points, or 1 point under 10%,
+  // and list the stages with the biggest budget saving first.
   const whatIf = stages.map((s) => {
-    const better = Math.min(100, s.rate + stepFor(s.rate));
-    const saving = budget * (1 - s.rate / better);
-    return { stage: s.label, from: s.rate, to: better, budget_saving: r(saving) };
+    const to = Math.min(100, s.rate + (s.rate < 10 ? 1 : 5));
+    return { stage: s.label, controlled_by: PLAN_OWNERS[s.key], from: s.rate, to, budget_saving: r(budget * (1 - s.rate / to)) };
   }).sort((a, b) => b.budget_saving - a.budget_saving);
+  const spendPct = (budget / mktRevenue) * 100;
+  const leadToWon = (won / leads) * 100;
+  const planCheck = won < 1 ? 'below one deal'
+    : leadToWon > 10 || i.win_rate > 60 ? 'rates look too high'
+    : spendPct > 100 ? 'spends more than it brings in'
+    : spendPct > 40 ? 'a stretch'
+    : spendPct > 20 ? 'workable' : 'comfortable';
   const names = i.mode === 'simple' ? ['leads', 'opportunities', 'won'] : ['leads', 'mqls', 'sqls', 'opportunities', 'won'];
   const annual = { marketing_revenue: r(mktRevenue) };
   const monthly = {};
-  names.forEach((n, k) => { annual[n] = Math.ceil(counts[k]); monthly[n] = n === 'won' ? +(counts[k] / 12).toFixed(1) : r(counts[k] / 12); });
+  // Rounded as the page shows them: whole numbers a year, and a month to one decimal place under 10.
+  names.forEach((n, k) => { annual[n] = r(counts[k]); const m = counts[k] / 12; monthly[n] = m < 10 ? Math.round(m * 10) / 10 : r(m); });
   return {
     funnel_detail: i.mode === 'simple' ? 'basics only: lead to opportunity and win rate' : 'every stage',
     annual,
@@ -457,9 +565,64 @@ function planMaths(i) {
     budget_to_revenue_pct: +((budget / mktRevenue) * 100).toFixed(1),
     pipeline_needed: r(opps * i.deal_size),
     lead_to_won_pct: +((won / leads) * 100).toFixed(2),
-    weakest_stage: stages.slice().sort((a, b) => a.rate - b.rate)[0].label,
+    plan_check: planCheck,
+    budget_covers: 'media and programme spend only, excluding salaries and tools',
     what_if: whatIf,
+    start_with: whatIf[0].budget_saving > 0 ? whatIf[0].stage : null,
+    cpl_tenth_lower_saving: r(budget * 0.1),
     channel_budget: i.channels.map((c) => ({ name: c.name, leads: Math.ceil(leads * c.share / 100), budget: r(leads * (c.share / 100) * c.cpl) }))
+  };
+}
+
+// The figures exactly as the planner page shows them, so the review can quote them word for word.
+// They are worked out from the unrounded numbers with the page's own formatting, so they match it to the last digit.
+function planFigures(i, m) {
+  const money = moneyFmt(i.currency);
+  const pct = (n) => `${+(+n).toFixed(2)}%`;
+  const stages = PLAN_STAGES[i.mode === 'simple' ? 'simple' : 'detailed'];
+  const next = { lead_to_mql: 'MQLs', mql_to_sql: 'SQLs', sql_to_opp: 'opportunities', lead_to_opp: 'opportunities', win_rate: 'won deals' };
+  const mkt = i.target * i.marketing_share / 100;
+  const won = mkt / i.deal_size;
+  const counts = [won];
+  for (let k = stages.length - 1; k >= 0; k--) counts.unshift(counts[0] / (i[stages[k].key] / 100));
+  const leads = counts[0];
+  const opps = counts[counts.length - 2];
+  const cpl = i.channels.reduce((s, c) => s + (c.share / 100) * c.cpl, 0);
+  const budget = leads * cpl;
+  const perMonth = (n) => (n / 12 < 10 ? (n / 12).toFixed(1) : intFmt(n / 12));
+  return {
+    your_inputs: {
+      currency: i.currency,
+      revenue_target: money(i.target),
+      share_from_marketing: pct(i.marketing_share),
+      average_deal_size: money(i.deal_size),
+      sales_cycle: `${i.cycle_months} month${i.cycle_months === 1 ? '' : 's'}`,
+      sales_cycle_before_a_noun: `${i.cycle_months}-month`,
+      stage_rates: stages.map((s) => ({ stage: s.label, rate: pct(i[s.key]) })),
+      channels: i.channels.map((c) => ({ name: c.name, share: pct(c.share), cost_per_lead: money(c.cpl) }))
+    },
+    figures: {
+      revenue_marketing_must_source: money(mkt),
+      leads_needed_a_month: leads / 12 < 10 ? (leads / 12).toFixed(1) : intFmt(leads / 12),
+      leads_needed_a_year: intFmt(leads),
+      funnel: stages.map((s, k) => ({ stage: next[s.key], a_month: perMonth(counts[k + 1]), a_year: intFmt(counts[k + 1]) })),
+      marketing_budget_a_year: money(budget),
+      marketing_budget_a_month: money(budget / 12),
+      pipeline_to_create: money(opps * i.deal_size),
+      opportunities_a_year: intFmt(opps),
+      marketing_cost_per_won_deal: money(budget / won),
+      budget_as_share_of_revenue_sourced: `${(budget / mkt * 100).toFixed(1)}%`,
+      average_cost_per_lead: money(cpl),
+      saving_from_a_tenth_lower_cost_per_lead: money(budget * 0.1),
+      what_if: stages.map((s) => {
+        const from = i[s.key];
+        const to = Math.min(100, from + (from < 10 ? 1 : 5));
+        return { stage: s.label, controlled_by: PLAN_OWNERS[s.key], from: pct(from), to: from >= 100 ? 'already at 100%' : pct(to), saving: budget * (1 - from / to) };
+      }).sort((a, b) => b.saving - a.saving).map((w) => ({ ...w, saving: undefined, budget_saving: money(w.saving) })),
+      channels: i.channels.map((c) => ({ name: c.name, leads_a_year: intFmt(Math.ceil(leads * c.share / 100)), budget_a_year: money(leads * (c.share / 100) * c.cpl) })),
+      plan_check: m.plan_check,
+      plan_check_thresholds: ['20%', '40%', '100%', '10%', '60%']
+    }
   };
 }
 
@@ -473,44 +636,115 @@ function parseJsonLoose(text) {
   throw new Error('no JSON');
 }
 
+// ---------- review wording checks ----------
+// Claude writes the words; every number in a review must be one the page already shows.
+// Each review is checked, and any number that is not among the figures sends it back once for a rewrite.
+const numbersIn = (text) => (String(text || '').match(/\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?/g) || []).map((s) => Number(s.replace(/,/g, '')));
+
+function allowedNumbers(...sources) {
+  const set = new Set();
+  const walk = (v) => {
+    if (v === null || v === undefined) return;
+    if (typeof v === 'number') { if (Number.isFinite(v)) set.add(v); return; }
+    if (typeof v === 'string') { numbersIn(v).forEach((n) => set.add(n)); return; }
+    if (Array.isArray(v)) { v.forEach(walk); return; }
+    if (typeof v === 'object') Object.values(v).forEach(walk);
+  };
+  sources.forEach(walk);
+  for (let n = 0; n <= 10; n++) set.add(n); // small counts, which may be written as figures
+  set.add(12);                               // "12 months", the year the page talks about
+  return set;
+}
+
+const reviewTexts = (review) => Object.values(review).flatMap((v) => (Array.isArray(v) ? v : [v]));
+const unknownNumbers = (texts, allowed) => [...new Set(texts.flatMap((t) => numbersIn(t)).filter((n) => !allowed.has(n)))];
+const sentencesOf = (t) => String(t).split(/(?<=[.!?])\s+(?=[A-Z])/);
+
+// shape: { field: max length } for text fields, { field: [max items, max length] } for lists.
+async function writeReview(env, prompt, shape, allowed, label) {
+  const read = (text) => {
+    try {
+      const j = parseJsonLoose(text);
+      const out = {};
+      for (const [k, spec] of Object.entries(shape)) {
+        out[k] = Array.isArray(spec)
+          ? (Array.isArray(j[k]) ? j[k] : []).map((x) => clip(x, spec[1])).filter(Boolean).slice(0, spec[0])
+          : clip(j[k], spec);
+      }
+      return out.summary ? out : null;
+    } catch { return null; }
+  };
+  const messages = [{ role: 'user', content: prompt }];
+  let best = null, bestBad = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const msg = await claude(env, { max_tokens: 3000, messages });
+    const text = textOf(msg);
+    const review = read(text);
+    if (!review) { console.log(label + ' review unreadable', msg.stop_reason, text.slice(0, 300)); continue; }
+    const bad = unknownNumbers(reviewTexts(review), allowed);
+    if (!best || bad.length < bestBad.length) { best = review; bestBad = bad; }
+    if (!bad.length) break;
+    console.log(label + ' review used numbers not on the page', bad.join(' '));
+    messages.push({ role: 'assistant', content: text }, {
+      role: 'user',
+      content: `These numbers in your review are not among the figures provided: ${bad.join(', ')}. Rewrite the whole review so that every number is copied exactly from "figures" or "your_inputs". Where a point needs a number that is not there, make the point without a number. Reply only with the JSON.`
+    });
+  }
+  if (!best) throw fail(502, 'The AI review could not be written. Please try again.');
+  if (bestBad.length) {
+    // Last resort: drop any sentence or list item that still carries a number the page does not show.
+    const clean = (t) => sentencesOf(t).filter((s) => !unknownNumbers([s], allowed).length).join(' ');
+    for (const [k, spec] of Object.entries(shape)) {
+      best[k] = Array.isArray(spec) ? best[k].filter((x) => !unknownNumbers([x], allowed).length) : clean(best[k]);
+    }
+    if (!best.summary) throw fail(502, 'The AI review could not be written. Please try again.');
+  }
+  return best;
+}
+
+// Number formats that match the pages exactly.
+const moneyFmt = (currency) => (n) => new Intl.NumberFormat('en-GB', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n);
+const intFmt = (n) => Math.round(n).toLocaleString('en-GB');
+const oneFmt = (n) => (n < 10 ? (Math.round(n * 10) / 10).toLocaleString('en-GB') : intFmt(n));
+
+// Wording rules every review shares.
+const WORDING_RULES = `How to write it:
+- Write about this visitor's own figures and answers, whatever they are. Use their own names for things (channels, categories, countries) exactly as they typed them.
+- Every number you write must be copied exactly from "figures" or "your_inputs", with its currency symbol or % sign. Do not round, convert, add up, subtract or work out any new number, share or ratio, and do not write amounts in words such as "1.2 million" or "300k". If a point needs a number that is not listed, make it without a number.
+- Make every sentence grammatical for these exact figures: one customer, two customers; one month, three months; a figure of 1 takes the singular.
+- Write natural, varied sentences. Do not repeat the same phrase from one sentence or item to the next.
+- British English, no contractions, plain words. Never mention field names or explain how the figures or this review were worked out.
+- Never put a double quotation mark inside a text value; use single quotation marks if you must quote.`;
+
 async function plan(input, env) {
   const maths = planMaths(input);
-  const facts = JSON.stringify({ inputs: input, results: maths });
-  const msg = await claude(env, {
-    max_tokens: 3000,
-    messages: [{
-      role: 'user',
-      content: `You are a B2B marketing operations lead reviewing a pipeline plan. All figures below were calculated with fixed formulas. Use only these figures and do not invent benchmarks or statistics. If the funnel_detail is basics only, do not comment on stages that were not given; you may suggest tracking them. Currency is ${input.currency}.
+  const facts = planFigures(input, maths);
+  const prompt = `You are a demand generation leader reviewing a B2B pipeline plan that a visitor has just entered into a planner. All figures below were calculated with fixed formulas and are written exactly as the page shows them. Your job is the wording only.
 
-${facts}
+What the figures mean:
+- The marketing budget is media and programme spend only, excluding salaries and tools.
+- plan_check is the planner's verdict from fixed rules: marketing spend under 20% of the revenue it sources is comfortable, 20% to 40% workable, 40% to 100% a stretch, and above 100% it spends more than it brings in; more than 10% of leads becoming customers, or a win rate above 60%, means the rates look too high; 'below one deal' means the revenue marketing must source is less than one average deal, so the funnel figures are fractions of a deal and only indicative; say so plainly, and suggest checking the target, the share from marketing or the deal size. Base the summary on plan_check and do not contradict it.
+- Marketing is only asked to source share_from_marketing of the revenue target. The rest comes from other sources by design, so never say the plan falls short of the full target.
+- what_if raises one stage at a time by 5 percentage points, or 1 point for a rate under 10%, exactly as the page's table shows, with the biggest saving first. The first row is the stage the page highlights; say who controls it (controlled_by) if you recommend it. saving_from_a_tenth_lower_cost_per_lead is what a tenth lower cost per lead would save, which marketing controls.
+- If only the basics were given (two stages), do not comment on stages that were not given; you may suggest tracking them.
+- Call the money still to be won 'pipeline' or 'opportunities' as suits the sentence. Use the phrase 'pipeline to create' no more than once in the whole review.
+- Do not use ARR, MRR, CAC, ROI or other abbreviations; MQL and SQL are fine. Write for a CEO.
 
-Write a short review in British English, without contractions, in plain words a CEO would understand. Reply only with JSON in this form:
-{"summary": "two sentences on what the plan needs", "constraint": "one or two sentences on the single biggest constraint, using the what_if figures", "risks": ["risk", "risk"], "actions": ["action", "action", "action"]}`
-    }]
-  });
-  let review = null;
-  const text = textOf(msg);
-  try {
-    const j = parseJsonLoose(text);
-    const s = (x, n) => clip(x, n);
-    review = {
-      summary: s(j.summary, 500),
-      constraint: s(j.constraint, 500),
-      risks: (Array.isArray(j.risks) ? j.risks : []).map((x) => s(x, 300)).filter(Boolean).slice(0, 3),
-      actions: (Array.isArray(j.actions) ? j.actions : []).map((x) => s(x, 300)).filter(Boolean).slice(0, 4)
-    };
-  } catch { /* handled below */ }
-  if (!review || !review.summary) {
-    console.log('Plan review unreadable', msg.stop_reason, text.slice(0, 300));
-    throw fail(502, 'The AI review could not be written. Please try again.');
-  }
+${WORDING_RULES}
+
+${JSON.stringify(facts)}
+
+Reply only with JSON in this form:
+{"summary": "two sentences on what this plan needs and whether it is realistic, following plan_check", "constraint": "one or two sentences on the single biggest constraint on this plan, judged from plan_check, the spend and the lead volume", "risks": ["risk", "risk"], "actions": ["action", "action", "action"]}`;
+  const review = await writeReview(env, prompt, { summary: 500, constraint: 500, risks: [3, 300], actions: [4, 300] }, allowedNumbers(facts), 'Plan');
   return { tool: 'plan', input, model: env.MODEL || DEFAULTS.MODEL, results: maths, review };
 }
 
 // ---------- referral revenue calculator ----------
 
 // Referral Revenue Calculator: the formulas, shared word for word by the page and the server.
-// Presets come from published benchmarks (see the page for sources). Cautious uses the low end.
+// Benchmarks come from published sources (see the page). The page shows cautious as Low,
+// typical as Typical and strong as High. Low uses the low end of each range.
 const REF_PRESETS = {
   cautious: { refer: 2, signup: 5, convert: 5, uplift: 0, churn_cut: 0 },
   typical: { refer: 5, signup: 15, convert: 8, uplift: 25, churn_cut: 18 },
@@ -519,9 +753,9 @@ const REF_PRESETS = {
 const REF_RAMP_MONTHS = 6;   // the programme builds to full strength over six months
 const REF_SALES_LAG = 3;     // sales-led deals close about three months after sign-up
 const REF_MAX_LIFE = 10;     // cap customer lifetime at ten years
-
-// Improve a rate by 5 points, or by 1 point when it is under 10%.
-const refStep = (rate) => (rate < 10 ? 1 : 5);
+const REF_SMALL_GROWTH = 2;  // under 2% more customers in a year is a modest addition to growth
+const REF_PAYBACK_GOOD = 12; // paying back within 12 months makes a programme worth running
+const REF_PAYBACK_MAX = 24;  // taking more than 24 months to pay back makes it not worth it
 
 function refRates(i) {
   const p = REF_PRESETS[i.preset] || REF_PRESETS.typical;
@@ -554,59 +788,89 @@ function refRun(i, rates) {
 function refMaths(i) {
   const r0 = (x) => Math.round(x);
   const r1 = (x) => Math.round(x * 10) / 10;
+  const r2 = (x) => Math.round(x * 100) / 100;
+  const sales = i.motion === 'sales_led';
   const rates = refRates(i);
   const run = refRun(i, rates);
   const n = run.won;
+  const few = r1(n) < 1; // fewer than one customer as the page shows it, rounded to one decimal place
   const rewardCost = n * i.reward;
   const runningCost = 12 * i.monthly_cost;
   const totalCost = rewardCost + runningCost;
   const costPer = n > 0 ? totalCost / n : null;
+  const growth = (n / i.customers) * 100;
   const life = (churn) => Math.min(REF_MAX_LIFE, 100 / Math.max(churn, 0.1));
   const lifeNormal = life(i.churn);
   const lifeReferred = life(i.churn * (1 - rates.churn_cut / 100));
+  const per100 = (run.referrers / i.customers) * 100;
 
-  // What-if: improve one lever at a time and see the extra customers in a year.
+  // Payback: months of the referred customers' own revenue needed to cover the programme cost.
+  const payback = !few ? r1(costPer / (i.acv / 12)) : null;
+  // First-year revenue from the referred customers for each 1 of programme cost.
+  const perPound = !few && totalCost > 0 ? (n * i.acv) / totalCost : null;
+
+  // Referred customers a year needed to pay back within 12 months (and at least one customer).
+  // The model is linear in the customer base, so the base needed scales directly.
+  const needed = i.acv > i.reward ? Math.max(1, runningCost / (i.acv - i.reward)) : null;
+  const baseNeeded = needed !== null && n > 0 ? i.customers * (needed / n) : null;
+
+  // The verdict on the question the page asks: does the programme pay for itself, and how much does it add?
+  // Paid channels are a benchmark only. Referrals sit alongside them in the channel mix.
+  let verdict;
+  if (few) verdict = 'too_few';
+  else if (payback > REF_PAYBACK_MAX) verdict = 'not_worth_it';
+  else if (payback >= REF_PAYBACK_GOOD) verdict = 'small_test';
+  else if (growth < REF_SMALL_GROWTH) verdict = 'worth_running_modest';
+  else verdict = 'worth_running';
+
+  // What-if: improve one rate at a time by the same share and see the extra customers in a year.
   const levers = [
     ['refer', 'Customers who refer each month'],
     ['signup', 'Referred people who sign up'],
-    i.motion === 'sales_led' ? ['win_rate', 'Your win rate'] : ['convert', 'Sign-ups who become paying']
+    sales ? ['win_rate', 'Your win rate'] : ['convert', 'Sign-ups who become paying']
   ];
   const whatIf = levers.map(([key, label]) => {
     const from = key === 'win_rate' ? i.win_rate : rates[key];
-    const to = Math.min(100, from + refStep(from));
+    const to = Math.min(100, from + (from < 10 ? 1 : 5)); // same rule as the page: 5 points, or 1 point under 10%
     let better;
     if (key === 'win_rate') better = { ...rates, convert: Math.min(100, to * (1 + rates.uplift / 100)) };
     else better = { ...rates, [key]: to };
     const extra = refRun(i, better).won - n;
-    return { lever: label, from, to, extra_customers: r1(extra), extra_arr: r0(extra * i.acv) };
-  }).sort((a, b) => b.extra_arr - a.extra_arr);
+    return { lever: label, from: r1(from), to: r1(to), extra_customers: r1(extra), extra_yearly_revenue: r0(extra * i.acv) };
+  }).sort((a, b) => b.extra_yearly_revenue - a.extra_yearly_revenue);
 
   const warnings = [];
-  if (n < 1) warnings.push('At these numbers, referrals would bring in fewer than one new customer in a year.');
-  if (i.reward > i.acv * 0.2) warnings.push('The reward is more than 20% of a customer\'s first-year value, which is above the usual range of 5% to 20%.');
-  if (i.reward >= i.paid_cac) warnings.push('The reward costs as much as winning a customer through paid channels, so it removes most of the saving.');
-  if (costPer !== null && costPer >= i.paid_cac) warnings.push('Once running costs are included, referrals cost more per customer than paid channels at these numbers.');
+  if (few) warnings.push('At these numbers, referrals would bring in fewer than one new customer in a year.');
+  if (i.reward > i.acv * 0.2) warnings.push('The reward is more than 20% of what a customer pays in their first year, above the usual range of 5% to 20%.');
+  if (i.paid_cac < i.acv / 12) warnings.push('Your paid channel cost per customer is less than one month of what a customer pays. That is unusually low for deals of this size, so check it includes all sales and marketing costs, as it is the benchmark shown here.');
+  if (per100 >= 75) warnings.push(`These benchmarks assume about ${r0(per100)} referrals a year for every 100 customers. That is rare for a business that sells to other businesses, so treat it as a best case.`);
+  else if (sales && per100 >= 40) warnings.push(`These benchmarks assume about ${r0(per100)} referrals a year for every 100 customers. For a business that sells through a sales team, that is a best case.`);
 
   return {
+    verdict,
     rates: { refer: rates.refer, signup: rates.signup, convert: r1(rates.convert), churn_cut: rates.churn_cut },
     referrers: r0(run.referrers),
+    referrals_per_100_customers: r0(per100),
     signups: r1(run.signups),
     new_customers: r1(n),
     still_in_pipeline: r1(run.later),
-    arr_added: r0(n * i.acv),
-    share_of_base_pct: r1((n / i.customers) * 100),
+    yearly_revenue_added: r0(n * i.acv),
+    share_of_base_pct: r1(growth),
     reward_cost: r0(rewardCost),
     running_cost: r0(runningCost),
     total_cost: r0(totalCost),
-    cost_per_customer: costPer === null ? null : r0(costPer),
+    cost_per_customer: few ? null : r0(costPer),
+    payback_months: payback,
+    return_per_pound: perPound === null ? null : r2(perPound),
     paid_cost_same_customers: r0(n * i.paid_cac),
-    saving_vs_paid: r0(n * i.paid_cac - totalCost),
-    payback_months: costPer === null ? null : r1(costPer / (i.acv / 12)),
+    paid_payback_months: r1(i.paid_cac / (i.acv / 12)),
+    customers_needed_to_pay_back: needed === null ? null : r1(needed),
+    customer_base_to_pay_back: baseNeeded === null ? null : r0(baseNeeded),
     reward_pct_of_acv: r1((i.reward / i.acv) * 100),
     lifetime_years_normal: r1(lifeNormal),
     lifetime_years_referred: r1(lifeReferred),
-    lifetime_value_normal: r0(i.acv * lifeNormal),
-    lifetime_value_referred: r0(i.acv * lifeReferred),
+    lifetime_revenue_normal: r0(i.acv * lifeNormal),
+    lifetime_revenue_referred: r0(i.acv * lifeReferred),
     monthly_new_customers: run.monthly,
     what_if: whatIf,
     warnings
@@ -627,37 +891,78 @@ function cleanReferralInput(raw) {
   return out;
 }
 
+// The figures exactly as the referral page shows them, so the review can quote them word for word.
+function refFigures(i, m) {
+  const money = moneyFmt(i.currency);
+  const pct = (n) => `${+(+n).toFixed(1)}%`;
+  const sales = i.motion === 'sales_led';
+  const runningCost = 12 * i.monthly_cost;
+  const months = (n) => (oneFmt(n) === '0' ? 'less than a month' : `${oneFmt(n)} month${oneFmt(n) === '1' ? '' : 's'}`);
+  return {
+    your_inputs: {
+      currency: i.currency,
+      how_customers_buy: sales ? 'through a sales team' : 'they sign up themselves',
+      assumptions: { cautious: 'Cautious', typical: 'Typical', strong: 'Strong' }[i.preset],
+      paying_customers_today: intFmt(i.customers),
+      yearly_value_per_customer: money(i.acv),
+      paid_channel_cost_per_customer: money(i.paid_cac),
+      reward_per_referred_customer: money(i.reward),
+      running_cost_a_month: money(i.monthly_cost),
+      customers_lost_a_year: pct(i.churn),
+      ...(sales ? { win_rate: pct(i.win_rate) } : {})
+    },
+    figures: {
+      verdict: m.verdict,
+      new_customers_in_a_year: oneFmt(m.new_customers),
+      growth_on_todays_base: pct(m.share_of_base_pct),
+      yearly_revenue_added: money(m.yearly_revenue_added),
+      referrals_made: intFmt(m.referrers),
+      referrals_a_year_per_100_customers: intFmt(m.referrals_per_100_customers),
+      people_who_sign_up: oneFmt(m.signups),
+      sign_up_rate: pct(m.rates.signup),
+      become_paying_rate: pct(m.rates.convert),
+      customers_who_refer_each_month: pct(m.rates.refer),
+      ...(sales ? { still_in_pipeline_at_year_end: oneFmt(m.still_in_pipeline) === '0' ? 'none' : oneFmt(m.still_in_pipeline) } : {}),
+      reward_cost: money(m.reward_cost),
+      running_cost_a_year: money(runningCost),
+      programme_cost: money(m.total_cost),
+      cost_per_referred_customer: m.cost_per_customer === null ? 'none yet' : money(m.cost_per_customer),
+      pays_back_in: m.payback_months === null ? 'does not pay back' : months(m.payback_months),
+      paid_channels_payback: months(m.paid_payback_months),
+      first_year_revenue_per_1_of_cost: m.return_per_pound === null ? 'none' : m.return_per_pound.toFixed(2),
+      referred_customers_a_year_needed_to_pay_back_in_12_months: m.customers_needed_to_pay_back === null ? 'not possible, as the reward is more than a year of revenue' : oneFmt(m.customers_needed_to_pay_back),
+      customer_base_needed_to_pay_back_in_12_months: m.customer_base_to_pay_back === null ? 'not known' : intFmt(m.customer_base_to_pay_back),
+      reward_as_share_of_first_year_value: pct(m.reward_pct_of_acv),
+      lifetime_value_typical_customer: money(m.lifetime_revenue_normal),
+      lifetime_value_referred_customer: money(m.lifetime_revenue_referred),
+      referred_customers_cancel_less_often_by: m.rates.churn_cut ? `${m.rates.churn_cut}%` : 'not assumed',
+      what_if: m.what_if.map((w) => ({ lever: w.lever, from: pct(w.from), to: pct(w.to), extra_customers_in_a_year: w.extra_yearly_revenue > 0 && oneFmt(w.extra_customers) === '0' ? 'under 0.1' : oneFmt(w.extra_customers), extra_yearly_revenue: money(w.extra_yearly_revenue) })),
+      warnings: m.warnings,
+      verdict_thresholds: ['12 months', '24 months', '2%']
+    }
+  };
+}
+
 async function referral(input, env) {
   const maths = refMaths(input);
-  const facts = JSON.stringify({ inputs: input, results: maths });
-  const msg = await claude(env, {
-    max_tokens: 3000,
-    messages: [{
-      role: 'user',
-      content: `You are a B2B SaaS growth lead advising whether a customer referral programme is worth running. All figures below were calculated with fixed formulas from the user's inputs and ${input.preset} benchmark assumptions. Use only these figures and do not invent benchmarks or statistics. Be honest: if the numbers are small or the programme costs more than paid channels, say so plainly and explain what would need to change. Currency is ${input.currency}.
+  const facts = refFigures(input, maths);
+  const prompt = `You are a B2B SaaS growth lead advising whether a customer referral programme is worth running alongside a company's existing channels. A visitor has just entered their own numbers. All figures below were calculated with fixed formulas from those numbers and the ${facts.your_inputs.assumptions} benchmarks (the page offers Cautious, Typical and Strong), and are written exactly as the page shows them. Your job is the wording only.
 
-${facts}
+What the figures mean:
+- verdict is the page's answer, based on payback, the months of the referred customers' own revenue needed to cover the rewards and running cost. too_few: fewer than one new customer in a year, too few customers for referrals to pay. not_worth_it: pays back in more than 24 months. small_test: pays back in 12 to 24 months, worth a small test first. worth_running_modest: pays back within 12 months but adds under 2% more customers in a year, worth running as a modest addition to growth. worth_running: pays back within 12 months and adds 2% or more. Start from that verdict and do not contradict it, though you may be more cautious.
+- Referrals add to the customers won through other channels rather than replacing them. The paid channel cost is a benchmark within the channel mix, not an alternative, so never judge the programme on whether it is cheaper than paid channels and never describe a saving against them.
+- what_if shows the effect of improving one number by 5 percentage points (1 point for rates under 10%), exactly as the page's table shows, with the biggest effect first. Name the first one and quote its figures as given.
+- If warnings say the benchmarks are a best case, or that the paid channel cost looks low, mention it.
+- Be honest: if the numbers are small or the payback is long, say so plainly and explain what would need to change.
+- Say "a year" or "yearly revenue", never ARR, MRR, CAC or LTV. Write for a founder.
 
-Write a short review in British English, without contractions, in plain words a founder would understand. Reply only with JSON in this form:
-{"summary": "two sentences on whether a referral programme looks worth testing and why", "lever": "one or two sentences on the number that matters most, using the what_if figures", "risks": ["risk", "risk"], "actions": ["action", "action", "action"]}`
-    }]
-  });
-  let review = null;
-  const text = textOf(msg);
-  try {
-    const j = parseJsonLoose(text);
-    const s = (x, n) => clip(x, n);
-    review = {
-      summary: s(j.summary, 500),
-      lever: s(j.lever, 500),
-      risks: (Array.isArray(j.risks) ? j.risks : []).map((x) => s(x, 300)).filter(Boolean).slice(0, 3),
-      actions: (Array.isArray(j.actions) ? j.actions : []).map((x) => s(x, 300)).filter(Boolean).slice(0, 4)
-    };
-  } catch { /* handled below */ }
-  if (!review || !review.summary) {
-    console.log('Referral review unreadable', msg.stop_reason, text.slice(0, 300));
-    throw fail(502, 'The AI review could not be written. Please try again.');
-  }
+${WORDING_RULES}
+
+${JSON.stringify(facts)}
+
+Reply only with JSON in this form:
+{"summary": "two sentences on whether a referral programme looks worth running for this company and why", "lever": "one or two sentences on the number that matters most, using the first what_if row", "risks": ["risk", "risk"], "actions": ["action", "action", "action"]}`;
+  const review = await writeReview(env, prompt, { summary: 500, lever: 500, risks: [3, 300], actions: [4, 300] }, allowedNumbers(facts), 'Referral');
   return { tool: 'referral', input, model: env.MODEL || DEFAULTS.MODEL, results: maths, review };
 }
 
@@ -693,7 +998,7 @@ const ROUTE_COUNTRIES = {
     employer_text: 'pension, unemployment, health, care and accident insurance and the small-employer sick pay levy, about 25% of pay, falling above the ceilings of €69,750 and €101,400',
     notes: ['A GmbH needs €25,000 share capital, with €12,500 paid in before registration.'],
     eor: 'In Germany an employer of record must hold a labour leasing licence, and the same person can usually be placed with you for at most 18 months.',
-    eor_limit: 18
+    eor_limit: 18, limit_text: 'German law limits each person to 18 months placed with you'
   },
   fr: {
     name: 'France', currency: 'EUR', english: false, salary: 60000,
@@ -701,8 +1006,9 @@ const ROUTE_COUNTRIES = {
     employer: (s) => 0.235 * s + 0.1466 * Math.min(s, 48060) + 0.0425 * Math.min(s, 192240) + 0.1478 * clampTo(s - 48060, 0, 336420),
     employer_text: 'health, family, pension, unemployment and other contributions, about 40% to 45% of pay. Pay below about €65,600 gets a reduction this tool does not apply, so it slightly overstates cost there',
     notes: ['Employers must also pay at least half of a company health plan, which is not included here.'],
-    eor: 'France restricts lending workers for profit. Employer of record usually runs through wage portage, which only suits skilled, autonomous people on temporary assignments, for up to 36 months.',
-    eor_limit: 18
+    eor: 'France restricts lending workers for profit. Employer of record usually runs through wage portage, which the law allows only for skilled, autonomous people on occasional or specialist assignments, not permanent roles, and for at most 36 months per assignment.',
+    eor_limit: 36, limit_text: 'French law limits each wage portage assignment to 36 months',
+    portage: true
   },
   nl: {
     name: 'Netherlands', currency: 'EUR', english: false, salary: 65000,
@@ -729,7 +1035,7 @@ const ROUTE_COUNTRIES = {
     employer_text: 'pension, disability, accident, Labour Fund and guaranteed benefits contributions, plus 1.5% workplace pension, about 22% up to PLN 282,600',
     notes: ['An sp. z o.o. needs PLN 5,000 share capital.'],
     eor: 'If an employer of record is set up as temporary agency work, the same person can be placed with you for at most 18 months in any 36. From July 2026 the labour inspectorate can also reclassify contracts as employment.',
-    eor_limit: 18
+    eor_limit: 18, limit_text: 'Polish law limits each person to 18 months in any 36 placed with you as temporary agency work'
   },
   sg: {
     name: 'Singapore', currency: 'SGD', english: true, salary: 120000,
@@ -777,12 +1083,39 @@ function routeHeadcount(i) {
   return out;
 }
 
+const ROUTE_MATERIAL_SHARE = 0.1;  // a saving below a tenth of employer of record fees is within the margin of these estimates
+const ROUTE_MATERIAL_MONTHS = 3;   // and it must also be worth at least three months of running costs
+
+// The first month someone would pass the country's time limit on employer of record placements.
+// Each person's limit runs from their own start date. When the team shrinks, the newest people are assumed to leave first.
+function routeLimitMonth(heads, limit) {
+  if (!limit) return null;
+  const groups = [];
+  let prev = 0;
+  for (let m = 1; m <= heads.length; m++) {
+    const h = heads[m - 1];
+    if (h > prev) groups.push({ start: m, n: h - prev });
+    let out = Math.max(0, prev - h);
+    while (out > 0 && groups.length) {
+      const g = groups[groups.length - 1];
+      const k = Math.min(out, g.n);
+      g.n -= k; out -= k;
+      if (!g.n) groups.pop();
+    }
+    prev = h;
+    if (groups.length && m - groups[0].start >= limit) return m;
+  }
+  return null;
+}
+
 function routeMaths(i) {
   const r0 = (x) => Math.round(x);
   const c = ROUTE_COUNTRIES[i.country] || ROUTE_COUNTRIES.uk;
   const heads = routeHeadcount(i);
   const start = ROUTE_START_MONTH[i.urgency] || 3;
   const hires = heads.some((h) => h > 0);
+  const firstHire = heads.findIndex((h) => h > 0) + 1;
+  const stays = heads[ROUTE_MONTHS - 1] > 0;          // somebody is still employed at the end of the plan
 
   // The cost of employing one person, which is the same on either route.
   const employer = c.employer(i.salary, i);
@@ -791,7 +1124,7 @@ function routeMaths(i) {
   let teamCost = 0;
   for (const h of heads) teamCost += h * perPerson / 12 + payTax(h);
 
-  // Route costs, on top of pay.
+  // Route costs: fees, setup and running costs. Salaries and employer taxes are left out because they are the same on either route.
   const uplift = !c.english && !i.local_language;
   const running = i.running * (uplift ? ROUTE_LANGUAGE_UPLIFT : 1);
   const eorMonth = (h) => h * i.fee;
@@ -803,7 +1136,8 @@ function routeMaths(i) {
   // Month by month, when does your own company become cheaper to run than employer of record?
   let switchMonth = null;
   for (let m = 1; m <= ROUTE_MONTHS; m++) if (heads[m - 1] > 0 && eorMonth(heads[m - 1]) >= ownMonth(heads[m - 1])) { switchMonth = m; break; }
-  const crossHead = i.fee > i.payroll ? Math.ceil(running / (i.fee - i.payroll)) : null;
+  // Team size from which your own company costs less each month than the fees. With no running cost it does from the first person.
+  const crossHead = running <= 0 ? 1 : i.fee > i.payroll ? Math.ceil(running / (i.fee - i.payroll)) : null;
 
   // Cost of a plan that uses employer of record until month sw, then your own company.
   // Setup is paid when it starts, and running costs begin once the company is ready.
@@ -819,42 +1153,61 @@ function routeMaths(i) {
   };
   const total = (sw) => planCost(sw)[ROUTE_MONTHS - 1];
   const stayEor = planCost(null);
+  const eorTotal = stayEor[ROUTE_MONTHS - 1];
+
+  // Country rules. A time limit runs from each person's start date.
+  const limitMonth = hires ? routeLimitMonth(heads, c.eor_limit) : null;
+  const limitHit = limitMonth !== null;
+  const banned = c.eor_limit === 0 && hires;
+  const portageRule = !!c.portage && hires && stays && !!i.plan_permanent; // wage portage is not allowed for permanent roles
+  const clip = (sw) => (limitHit ? Math.max(readyMonth, Math.min(sw, limitMonth)) : sw);
+
   const direct = Math.max(readyMonth, start);       // own company ready for the first hire, no employer of record
   const financialSwitch = switchMonth === null ? null : Math.max(switchMonth, readyMonth);
   // The cheapest way to end up on your own company, among the sensible switch months.
-  const options = [direct, financialSwitch].filter((x) => x !== null && x <= ROUTE_MONTHS);
+  const options = [direct, financialSwitch].filter((x) => x !== null && x <= ROUTE_MONTHS).map(clip);
   const cheapestOwn = options.reduce((a, b) => (total(b) < total(a) ? b : a), options[0]);
-  const financial = hires && total(cheapestOwn) < stayEor[ROUTE_MONTHS - 1];
+  const bestSaving = hires && !passes ? eorTotal - total(cheapestOwn) : 0;
+  const threshold = Math.max(ROUTE_MATERIAL_SHARE * eorTotal, ROUTE_MATERIAL_MONTHS * running);
+  const financial = hires && !passes && bestSaving >= threshold;
+  const smallSaving = hires && !passes && bestSaving > 0 && !financial;
 
   // Risks. Urgent ones need your own company as soon as it can be ready; a country time limit can be planned around.
-  const limitHit = c.eor_limit !== null && c.eor_limit > 0 && heads.some((h, k) => h > 0 && k + 1 > c.eor_limit);
-  const banned = c.eor_limit === 0 && hires;
   const urgentRisk = !!(i.risk_sales || i.risk_manager || i.risk_licences || i.risk_regulated || passes || banned);
-  const risk = urgentRisk || limitHit;
-  const strategic = !!(i.plan_permanent || i.ma);
+  const risk = urgentRisk || limitHit || portageRule;
+  const strategic = hires && ((!!i.plan_permanent && stays) || !!i.ma);
   const score = [financial, risk, strategic].filter(Boolean).length;
 
   // Pick the plan.
   let route = 'eor', sw = null;
   if (hires && (passes || score >= 2)) {
     route = 'own';
-    if (urgentRisk) sw = direct;
+    if (urgentRisk || portageRule) sw = direct;
     else if (financial) sw = cheapestOwn;
-    else sw = limitHit ? c.eor_limit : direct;
-    if (limitHit) sw = Math.max(readyMonth, Math.min(sw, c.eor_limit));
+    else sw = limitHit ? limitMonth : direct;
+    sw = clip(sw);
     if (start >= readyMonth && total(direct) <= total(sw)) sw = direct;
   }
-  const plan = route === 'own' ? planCost(sw) : stayEor;
+  // Employer of record with a time limit: costed as employer of record until the limit, then your own company if you keep the team.
+  const bridge = route === 'eor' && limitHit;
+  if (bridge) sw = Math.max(readyMonth, limitMonth);
+  const plan = sw === null ? stayEor : planCost(sw);
   const setupStart = sw === null ? null : Math.max(1, sw - setupMonths);
   const usesEor = route === 'eor' || (!passes && heads.slice(0, sw - 1).some((h) => h > 0));
-  const firstHire = heads.findIndex((h) => h > 0) + 1;
-  const altOwn = hires ? (financial ? cheapestOwn : direct) : null;
-  const altSaving = altOwn ? stayEor[ROUTE_MONTHS - 1] - total(altOwn) : 0;
+  let payback = null;                                // first month the plan's running total is back below employer of record
+  if (sw !== null && !passes) for (let m = sw; m <= ROUTE_MONTHS; m++) if (plan[m - 1] <= stayEor[m - 1]) { payback = m; break; }
 
   // The headline, the main reason and the money, written for the person reading the page.
-  let headline, reason, money;
-  const per = c.name;
-  const cur = (n) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: c.currency, maximumFractionDigits: 0 }).format(Math.round(n / 10) * 10);
+  const cur = (n) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: c.currency, maximumFractionDigits: 0 }).format(Math.abs(n) < 1000 ? Math.round(n / 10) * 10 : Math.round(n / 100) * 100);
+  const people = (n) => (n === 1 ? '1 person' : n + ' people');
+  const yours = 'your ' + c.entity;
+  const same = ' Salaries and employer taxes are the same on either route.';
+  const crossText = switchMonth === null ? '' : crossHead <= 1
+    ? 'Even with one person, your own company costs less each month than employer of record fees.'
+    : switchMonth <= firstHire
+      ? 'At about ' + crossHead + ' people, which your plan has from the start, your own company costs less each month than employer of record fees.'
+      : 'From about ' + crossHead + ' people (month ' + switchMonth + ') your own company costs less each month than employer of record fees.';
+  let headline, reason, money, reasonIs = '';
   if (!hires) {
     headline = 'Add at least one person to see your route';
     reason = 'Your hiring plan has nobody starting in the next 24 months.';
@@ -864,56 +1217,101 @@ function routeMaths(i) {
     else if (!usesEor) headline = 'Set up your own company before your first hire';
     else headline = 'Employer of record first, then your own company from month ' + sw;
     if (passes) reason = 'Your hires need work passes, and in Singapore only your own company can sponsor them.';
-    else if (banned) reason = 'Spanish law reserves supplying workers to licensed temporary work agencies, so long-term employer of record is risky in Spain.';
+    else if (banned) reason = 'Spanish law reserves supplying workers to licensed temporary work agencies, so a long-term employer of record arrangement is risky in Spain.';
     else if (i.risk_sales || i.risk_manager) reason = 'Local sales staff or a country manager can create a taxable presence, even through employer of record.';
     else if (i.risk_licences) reason = 'Local licences, contracts in your own name, tenders or local data storage usually need your own company.';
     else if (i.risk_regulated) reason = 'Regulated sectors often need a local company from the start.';
+    else if (portageRule) { reason = 'In France, employer of record runs through wage portage, which the law does not allow for permanent roles.'; reasonIs = 'rule'; }
     else if (!usesEor) reason = 'Your own company can be ready by month ' + sw + ', when your first person starts, so you can skip employer of record.';
-    else if (financial && sw === cheapestOwn && switchMonth !== null && sw >= switchMonth) reason = 'Your own company becomes cheaper to run once you reach about ' + crossHead + ' people, around month ' + switchMonth + '.';
-    else if (limitHit) reason = per + ' limits employer of record placements to ' + c.eor_limit + ' months, and your plan runs longer.';
-    else reason = i.ma ? 'You are hiring as part of an acquisition or carve-out, which usually needs your own company.' : 'You plan a permanent presence, so your own company is worth setting up as soon as it can be ready.';
-    const d = plan[ROUTE_MONTHS - 1] - stayEor[ROUTE_MONTHS - 1];
-    money = d <= 0 ? 'Saves about ' + cur(-d) + ' over 24 months compared with employer of record, on top of pay.'
-      : 'Costs about ' + cur(d) + ' more over 24 months than employer of record, the price of moving early to manage the risks.';
+    else if (financial && switchMonth !== null && sw >= switchMonth) reason = crossText + (payback ? ' Switching in month ' + sw + ' pays back the setup cost by month ' + payback + '.' : '');
+    else if (limitHit) { reason = c.limit_text + ', and your first hires reach that in month ' + limitMonth + '.'; reasonIs = 'rule'; }
+    else reason = i.ma ? 'You are hiring as part of an acquisition or carve-out, which usually needs your own company.' : 'You plan a long-term presence, so your own company is worth setting up as soon as it can be ready.';
+    const d = plan[ROUTE_MONTHS - 1] - eorTotal;
+    if (passes) money = 'Your own company costs about ' + cur(plan[ROUTE_MONTHS - 1]) + ' over 24 months in setup, running and payroll costs, salaries excluded. Employer of record is not an option for work pass holders.';
+    else if (cur(d) === cur(0)) money = 'Fees, setup and running costs come to about the same as employer of record over 24 months' + (limitHit ? ', which the ' + c.eor_limit + '-month limit would not allow for everyone anyway.' : '.') + same;
+    else if (d <= 0) money = 'You save about ' + cur(-d) + ' over 24 months on fees and running costs, after paying for setup' + (limitHit ? ', compared with keeping everyone on employer of record, which the ' + c.eor_limit + '-month limit would not allow anyway.' : '.') + same;
+    else if (limitHit && sw === limitMonth) money = 'Fees, setup and running costs come to about ' + cur(plan[ROUTE_MONTHS - 1]) + ' over 24 months. Employer of record alone would cost about ' + cur(eorTotal) + ', but the ' + c.eor_limit + '-month limit does not allow it beyond month ' + (limitMonth - 1) + ' for your first hires.' + same;
+    else money = 'Your own company costs about ' + cur(d) + ' more over 24 months in fees, setup and running costs than employer of record. That is the price of moving early to manage the risks.' + same;
+  } else if (bridge) {
+    headline = 'Use employer of record for up to ' + c.eor_limit + ' months per person';
+    reason = c.limit_text + '. Your first hires reach it in month ' + limitMonth + ', so start setting up ' + yours + ' by month ' + setupStart + ', or plan to end the placements.';
+    reasonIs = 'rule';
+    money = 'Employer of record fees come to about ' + cur(stayEor[limitMonth - 2]) + ' up to month ' + (limitMonth - 1) + '. If you keep the team and move it onto ' + yours + ' in month ' + sw + ', fees, setup and running costs come to about ' + cur(plan[ROUTE_MONTHS - 1]) + ' over 24 months.' + same;
   } else {
-    headline = limitHit ? 'Employer of record for now, with a plan for the ' + c.eor_limit + '-month limit' : 'Employer of record for now';
-    if (financial) reason = 'Your own company would save money from about ' + crossHead + ' people, but with no risks reported and no permanent presence planned, it is not worth setting up yet.';
-    else if (switchMonth !== null) reason = 'Your own company only becomes cheaper at about ' + crossHead + ' people, and over 24 months it would not pay back its setup cost.';
-    else reason = 'At this size, your own company would cost more to run than employer of record for the whole 24 months.';
-    money = altSaving > 0 ? 'Setting up your own company could save about ' + cur(altSaving) + ' over 24 months, but only if you are sure you are staying.'
-      : 'Staying on employer of record saves about ' + cur(-altSaving) + ' over 24 months compared with setting up your own company.';
+    if (banned) {
+      headline = 'Use employer of record only for a short, temporary need';
+      reason = 'Spanish law has no employer of record category, so a long-term arrangement risks being treated as illegal worker supply. For anything longer, register as an employer in Spain or set up ' + yours + '.';
+      reasonIs = 'rule';
+    } else if (financial) {
+      headline = 'Employer of record for now';
+      reason = 'Your own company would save about ' + cur(bestSaving) + ' over 24 months, but with no risks reported and no long-term presence planned, it is not worth committing to yet.';
+    } else {
+      headline = i.risk_sales || i.risk_manager ? 'Employer of record for now, but get tax advice first' : 'Stay on employer of record';
+      if (smallSaving) reason = 'Your own company would save only about ' + cur(bestSaving) + ' over 24 months, not worth the setup and admin.';
+      else if (switchMonth !== null) reason = 'Your own company only costs less each month from about ' + people(crossHead) + ', and within 24 months it would not pay back its setup cost.';
+      else reason = 'At this size, your own company would cost more to run each month than employer of record fees for the whole 24 months.';
+    }
+    const fees = ' Employer of record fees come to about ' + cur(eorTotal) + ' over 24 months.';
+    if (bestSaving > 0) money = (financial ? 'Setting up your own company could save about ' : 'Your own company would save only about ') + cur(bestSaving) + ' over 24 months on fees and running costs, after paying for setup' + (financial ? ', but only if you are sure you are staying.' : '.') + fees + same;
+    else if (cur(bestSaving) === cur(0)) money = 'Employer of record fees come to about ' + cur(eorTotal) + ' over 24 months, about the same as your own company would cost in setup, running and payroll costs.' + same;
+    else money = 'Employer of record fees come to about ' + cur(eorTotal) + ' over 24 months. Your own company would cost about ' + cur(eorTotal - bestSaving) + ' in setup, running and payroll costs, so staying saves about ' + cur(-bestSaving) + '.' + same;
   }
 
-  // Short notes that show how the rest of the answers affect the result.
-  const notes = [];
-  if (hires && route === 'own' && usesEor && start === 1) notes.push('Because your first person starts within a month, employer of record lets them start before your own company is ready.');
-  if (hires && route === 'own' && !usesEor && !passes) notes.push('Because your first hire is not until month ' + firstHire + ', there is time to set up your own company first.');
-  if (passes && start < sw) notes.push('Your first hire cannot start until month ' + sw + ', when your own company is ready to sponsor work passes.');
-  if (!i.exclusive && !urgentRisk) notes.push('Because they will not work only for you under your direction, contractors could also work.');
-  if (i.exclusive) notes.push('People who work only for you under your direction are usually employees, so contractors are not a safe option.');
+  // Notes. Each has a priority; the answer card shows the three that matter most.
+  const all = [];
+  const add = (p, text, rule) => all.push({ p, text, rule: !!rule });
+  // Country rules first.
+  if (passes && reasonIs !== 'rule') add(1, 'Employer of record is not an option for work pass holders in Singapore.', true);
+  if (banned && route === 'own') add(1, 'Spanish law has no employer of record category, so use it only for a short, temporary need.', true);
+  if (limitHit && reasonIs !== 'rule') add(1, c.limit_text + ', counted from each person\'s start date. ' + (route === 'own' && sw < limitMonth ? 'Your first hires would reach it in month ' + limitMonth + ', so employer of record could not cover them for the full 24 months.' : 'Your first hires reach it in month ' + limitMonth + '.'), true);
+  if (c.portage && hires && !portageRule) add(1, 'In France, employer of record runs through wage portage, which the law allows only for occasional or specialist assignments of up to 36 months, not permanent roles.', true);
+  else if (c.eor_limit > 0 && hires && !limitHit && !c.portage) add(3, c.limit_text + ', counted from each person\'s start date. Nobody in your plan reaches it within 24 months.', true);
+  if (route === 'eor' && (i.risk_sales || i.risk_manager)) add(1, 'Employer of record does not remove the taxable presence that local sales or management staff can create. Get tax advice before they start.', true);
+  if (route === 'eor' && i.risk_licences) add(1, 'Licences, tenders and contracts in your own name will still need your own company.', true);
+  if (hires && i.country === 'ie') add(3, 'Check that your employer of record provider holds an employment agency licence in Ireland.', true);
+  if (hires && i.country === 'au') add(3, 'In Victoria, Queensland and the ACT, check that your employer of record provider holds a labour hire licence.', true);
+  if (hires && i.country === 'ca') add(3, 'Check that your employer of record provider holds an Ontario temporary help agency licence.', true);
+  // The other side of the answer.
+  if (hires && i.plan_permanent && !stays) add(2, 'You ticked a long-term presence, but your plan ends with nobody in the country, so this is treated as a temporary need.');
+  if (route === 'own' && !passes && !banned && !urgentRisk && !portageRule && !financial) add(2, 'Employer of record still makes sense if you are not sure you are staying' + (limitHit ? ', as long as each person moves or leaves within ' + c.eor_limit + ' months of starting' : '') + '. At this size your own company costs about ' + cur(Math.max(0, plan[ROUTE_MONTHS - 1] - eorTotal)) + ' more over 24 months.');
+  if (route === 'eor' && !banned && financial) add(2, 'If you decide to stay, start setting up your own company a few months before you need it. A ' + c.entity + ' usually takes ' + c.setup_range + '.');
+  if (route === 'eor' && !banned && !bridge && !financial && crossHead) add(2, crossHead <= 1 ? 'Look again if you decide to stay, as your own company already costs less each month to run at this size.' : 'Look again if the team grows past about ' + people(crossHead) + ' and you plan to stay, as your own company then costs less each month.');
+  // Timing.
+  if (route === 'own' && usesEor && start === 1) add(4, 'Because your first person starts within a month, employer of record lets them start before your own company is ready.');
+  if (route === 'own' && !usesEor && !passes) add(4, 'Because your first hire is not until month ' + firstHire + ', there is time to set up your own company first.');
+  if (passes && start < sw) add(1, 'Your first hire cannot start until month ' + sw + ', when your own company is ready to sponsor work passes.');
   const others = [i.risk_sales || i.risk_manager ? 'local sales or management staff' : null, i.risk_licences ? 'licences, contracts or data storage' : null, i.risk_regulated ? 'a regulated sector' : null].filter(Boolean);
-  if (others.length > 1) notes.push('You also flagged ' + others.slice(1).join(' and ') + (others.length > 2 ? ', which point' : ', which points') + ' the same way.');
-  if (hires && i.plan_permanent) notes.push('You plan a permanent presence, which also points to your own company.');
-  if (hires && !i.plan_permanent && !i.ma && route === 'own') notes.push('Even without a permanent presence planned, the costs or the risks point to your own company.');
-  if (i.ma) notes.push('As this is part of an acquisition or carve-out, plan payroll and employment transfers alongside the deal.');
-  if (uplift) notes.push('Running your own company costs 30% more here because you do not work in the local language.');
+  if (others.length > 1) add(5, 'You also flagged ' + others.slice(1).join(' and ') + (others.length > 2 ? ', which point' : ', which points') + ' the same way.');
+  if (strategic && i.plan_permanent) add(6, route === 'own' ? 'You plan a long-term presence, which also points to your own company.' : 'You plan a long-term presence, but at this size that alone does not justify your own company.');
+  if (hires && !strategic && route === 'own') add(5, 'Even without a long-term presence planned, the costs or the risks point to your own company.');
+  if (i.ma) add(5, 'As this is part of an acquisition or carve-out, plan payroll and employment transfers alongside the deal.');
+  if (uplift) add(5, 'Running your own company costs 30% more here because you do not work in the local language.');
+  if (hires && !i.exclusive && !urgentRisk) add(2, 'Because they will not work only for you under your direction, contractors could also suit these roles, if they are truly independent.');
+  const notes = all.filter((n) => !n.rule).map((n) => n.text);
+  const heroNotes = all.map((n, k) => [n, k]).sort((a, b) => a[0].p - b[0].p || a[1] - b[1]).slice(0, 3).map((x) => x[0].text);
 
   const when = (m) => (m <= 1 ? 'Now' : 'Month ' + m);
+  const first = (n) => (n === 1 ? 'person' : n + ' people');
   const steps = [];
   if (hires && route === 'own') {
-    steps.push([setupStart, when(setupStart) + ': start setting up your ' + c.entity + '. It usually takes ' + c.setup_range + '.']);
-    if (usesEor) steps.push([firstHire, when(firstHire) + ': hire your first ' + (heads[firstHire - 1] === 1 ? 'person' : heads[firstHire - 1] + ' people') + ' through employer of record.']);
-    steps.push([sw + 0.5, when(sw) + ': ' + (usesEor ? 'move your team onto your own company.' : 'your own company employs your first ' + (heads[sw - 1] === 1 ? 'person' : heads[sw - 1] + ' people') + ' directly.')]);
+    steps.push([setupStart, when(setupStart) + ': start setting up ' + yours + (limitHit && sw === limitMonth ? ' at the latest' : '') + '. It usually takes ' + c.setup_range + '.']);
+    if (usesEor) steps.push([firstHire, when(firstHire) + ': hire your first ' + first(heads[firstHire - 1]) + ' through employer of record.']);
+    steps.push([sw + 0.5, when(sw) + ': ' + (usesEor ? 'move your team onto your own company.' : heads[sw - 1] > 0 ? 'your own company employs your first ' + first(heads[sw - 1]) + ' directly.' : 'your own company is ready to employ people, ahead of your first hire in month ' + firstHire + '.')]);
+  } else if (bridge) {
+    steps.push([firstHire, when(firstHire) + ': hire your first ' + first(heads[firstHire - 1]) + ' through employer of record. There is no setup cost.']);
+    steps.push([setupStart, when(setupStart) + ': decide whether you are keeping the team. If you are, start setting up ' + yours + ', which usually takes ' + c.setup_range + '.']);
+    steps.push([sw + 0.5, when(sw) + ': your first hires reach the ' + c.eor_limit + '-month limit. Move them onto your own company or end their placements.']);
   } else if (hires) {
-    steps.push([firstHire, when(firstHire) + ': hire your first ' + (heads[firstHire - 1] === 1 ? 'person' : heads[firstHire - 1] + ' people') + ' through employer of record. There is no setup cost.']);
-    if (switchMonth !== null) steps.push([Math.max(firstHire, switchMonth - setupMonths), when(Math.max(firstHire, switchMonth - setupMonths)) + ': review the decision. Your own company starts to cost less to run at about ' + crossHead + ' people.']);
-    if (limitHit) steps.push([c.eor_limit, 'By month ' + c.eor_limit + ': move people onto your own company or end their placements, because of the ' + c.eor_limit + '-month limit in ' + per + '.']);
-    if (switchMonth === null && !limitHit) steps.push([24, 'Month 24: review the decision if your plans grow.']);
+    steps.push([firstHire, when(firstHire) + ': hire your first ' + first(heads[firstHire - 1]) + ' through employer of record. There is no setup cost.']);
+    if (switchMonth !== null) steps.push([Math.max(firstHire, switchMonth - setupMonths), when(Math.max(firstHire, switchMonth - setupMonths)) + ': review the decision. ' + (crossHead <= 1 ? 'Your own company already costs less each month to run, so the question is whether you are staying.' : 'Your own company starts to cost less each month at about ' + people(crossHead) + '.')]);
+    if (switchMonth === null) steps.push([24, 'Month 24: review the decision if your plans grow.']);
   }
   steps.sort((a, b) => a[0] - b[0]);
 
   const flags = [];
-  flags.push(banned ? c.eor + ' Take local legal advice before using employer of record for anything beyond a short, temporary need.' : limitHit ? c.eor + ' Your plan has people in the country beyond month ' + c.eor_limit + ', so this counts as a risk.' : c.eor);
+  flags.push(banned ? c.eor + ' Take local legal advice before using employer of record for anything beyond a short, temporary need.'
+    : limitHit ? c.eor + ' The limit runs from each person\'s start date, and your first hires reach it in month ' + limitMonth + '.'
+    : portageRule ? c.eor + ' You plan a long-term presence, so this counts as a risk.' : c.eor);
   if (i.risk_sales || i.risk_manager) flags.push('Staff who sign contracts, close local sales or run the local operation can create a taxable presence in that country, even through employer of record. Get tax advice for that country before they start.');
   if (i.risk_licences) flags.push('Local licences, contracts in your own name, public tenders or local data storage usually need your own local company.');
   if (i.risk_regulated) flags.push('Regulated sectors often need a local company from the start. Check the rules for that country early.');
@@ -927,26 +1325,31 @@ function routeMaths(i) {
     team_cost_24_months: r0(teamCost),
     route,
     uses_employer_of_record: usesEor,
+    employer_of_record_available: !passes,
     first_hire_month: firstHire || null,
     switch_month: sw,
     setup_start_month: setupStart,
     ready_month: readyMonth,
     cost_crossover_month: switchMonth,
     crossover_headcount: crossHead,
+    payback_month: payback,
     headcount: heads,
-    cumulative_stay_eor: stayEor,
+    cumulative_stay_eor: passes ? null : stayEor,
     cumulative_plan: plan,
-    total_stay_eor: stayEor[ROUTE_MONTHS - 1],
+    total_stay_eor: passes ? null : eorTotal,
     total_plan: plan[ROUTE_MONTHS - 1],
-    difference: plan[ROUTE_MONTHS - 1] - stayEor[ROUTE_MONTHS - 1],
+    difference: passes ? null : plan[ROUTE_MONTHS - 1] - eorTotal,
+    best_own_company_saving: passes ? null : bestSaving,
+    saving_threshold: r0(threshold),
     running_cost_used: r0(running),
     checks: { financial, risk, strategic, score },
-    country_rules: { eor_limit_months: c.eor_limit, limit_applies: limitHit, needs_work_pass_sponsor: passes },
+    country_rules: { eor_limit_months: c.eor_limit, limit_applies: limitHit, limit_month: limitMonth, needs_work_pass_sponsor: passes, portage_not_for_permanent_roles: portageRule },
     headline,
     reason,
     money,
     notes,
-    steps: steps.map((x) => x[1]),
+    hero_notes: heroNotes,
+    steps: steps.map((x) => x[1].replace(/\.\./g, '.')),
     flags
   };
 }
@@ -977,39 +1380,76 @@ function cleanRouteInput(raw) {
   return out;
 }
 
+// The figures exactly as the hiring planner page shows them, so the review can quote them word for word.
+function routeFigures(i, m) {
+  const money = moneyFmt(m.currency);
+  const people = (n) => (n === 0 ? 'nobody' : `${intFmt(n)} ${n === 1 ? 'person' : 'people'}`);
+  const month = (n) => (n === null || n === undefined ? 'none' : `month ${n}`);
+  return {
+    your_inputs: {
+      country: m.country,
+      currency: m.currency,
+      average_salary_a_year: money(i.salary),
+      people_now: people(i.now), people_in_12_months: people(i.m12), people_in_24_months: people(i.m24),
+      first_person_starts: { month: 'within a month', soon: 'in about three months', later: 'in about five months' }[i.urgency],
+      employer_of_record_fee_per_person_a_month: money(i.fee),
+      own_company_setup_cost: money(i.setup),
+      own_company_running_cost_a_month: money(i.running),
+      payroll_cost_per_person_a_month: money(i.payroll),
+      answers: {
+        works_in_local_language: i.local_language, all_citizens_or_residents: i.citizens, work_only_for_you: i.exclusive,
+        local_sales_staff: i.risk_sales, country_manager: i.risk_manager, licences_contracts_or_data: i.risk_licences,
+        regulated_sector: i.risk_regulated, long_term_presence: i.plan_permanent, acquisition_or_carve_out: i.ma
+      }
+    },
+    figures: {
+      answer_shown: { headline: m.headline, reason: m.reason, money: m.money },
+      route: m.route === 'own' ? 'your own company' : 'employer of record',
+      one_person_costs_a_year: money(m.cost_per_person_year),
+      employer_taxes_and_contributions_per_person: money(m.employer_costs_per_person),
+      team_pay_and_employer_costs_over_24_months: money(Math.round(m.team_cost_24_months / 1000) * 1000),
+      fees_setup_and_running_costs_of_the_plan_over_24_months: money(m.total_plan),
+      employer_of_record_fees_throughout_over_24_months: m.total_stay_eor === null ? 'not available' : money(m.total_stay_eor),
+      plan_compared_with_employer_of_record: m.difference === null ? 'not comparable' : m.difference <= 0 ? `saves ${money(-m.difference)}` : `costs ${money(m.difference)} more`,
+      first_hire: month(m.first_hire_month),
+      own_company_from: month(m.switch_month),
+      start_setup: month(m.setup_start_month),
+      setup_paid_back_by: month(m.payback_month),
+      own_company_cheaper_each_month_from: m.crossover_headcount ? people(m.crossover_headcount) : 'not reached',
+      checks_pointing_to_own_company: `${m.checks.score} of 3`,
+      checks: m.checks,
+      country_limit_on_employer_of_record: m.country_rules.eor_limit_months ? `${m.country_rules.eor_limit_months} months per person` : 'none',
+      limit_reached_in: month(m.country_rules.limit_month),
+      next_steps: m.steps,
+      notes: m.hero_notes,
+      country_rules_and_flags: m.flags
+    }
+  };
+}
+
 async function routeReview(input, env) {
   const maths = routeMaths(input);
-  const facts = JSON.stringify({ inputs: input, results: maths });
-  const msg = await claude(env, {
-    max_tokens: 3000,
-    messages: [{
-      role: 'user',
-      content: `You are an adviser on international expansion, reviewing whether a company should hire in a new country through an employer of record or its own local company. All figures below were calculated with fixed formulas from the user's answers, 2026 employer contribution rules for the country and editable cost estimates. results.cost_per_person_year is salary plus statutory employer costs, and results.team_cost_24_months is pay plus employer costs for the whole team. Both are the same on either route. results.total_plan and results.total_stay_eor are only the route costs on top of pay, so always describe them as costs on top of pay. results.headline, results.reason and results.money are the plain-English answer already shown to the user, so keep the review consistent with them. results.flags include country rules on employer of record taken from published legal briefings, and you may refer to them. Use only these figures, answers and flags. Do not invent other country-specific laws, tax rules or statistics, and do not name any provider. This is general guidance, not legal or tax advice. In results.checks, each value is true when that check points towards setting up the company's own local company. A false risk check means no tax, regulatory or contract risk triggers were reported, which is good news, not a failure. results.ready_month is only the earliest month the company could employ people if setup started in month 1. Under the recommended plan, setup starts in results.setup_start_month and the company must be ready by results.switch_month, so use switch_month as the setup deadline. The country is ${maths.country} and the currency is ${maths.currency}.
+  const facts = routeFigures(input, maths);
+  const prompt = `You are an adviser on international expansion, reviewing whether a company should hire in a new country through an employer of record or its own local company. A visitor has just entered their own plan. All figures below were calculated with fixed formulas from their answers, 2026 employer contribution rules for the country and editable cost estimates, and are written exactly as the page shows them. Your job is the wording only.
 
-${facts}
+What the figures mean:
+- answer_shown is the plain-English answer already on the page. Keep the review consistent with it.
+- One person's cost and the team's pay and employer costs are the same on either route. The plan and employer of record totals are fees, setup and running costs only, with salaries and employer taxes left out, so describe them that way.
+- The cost check points to your own company only when the saving is big enough to matter; a smaller saving is within the margin of the estimates and is not a reason to set up a company. A risk check that does not point to your own company means no tax, regulatory or contract risks were reported, which is good news.
+- When employer of record is not available (Singapore work pass holders), do not compare with employer of record or mention a saving.
+- A country limit runs from each person's start date. setup_paid_back_by is when the plan's running total falls back below employer of record; own_company_cheaper_each_month_from is the team size at which the monthly cost of your own company falls below the fees. Keep these apart.
+- Figures leave out the company's own HR, legal and management time and any cost of closing the company. Use only these figures, answers and flags. Do not invent other country-specific laws, tax rules or statistics, and do not name any provider. This is general guidance, not legal or tax advice.
+- Say "employer of record", "your own company", "employer taxes and contributions", "over 24 months" and "a year". Do not use abbreviations such as EOR, ARR, PE or TCO. Write for a CFO or HR director.
 
-Write a short review in British English, without contractions, in plain words a CFO or HR director would understand. Reply only with JSON in this form:
-{"summary": "two sentences on the recommended route and why", "driver": "one or two sentences on what is driving the route, using the three checks and the cost figures", "risks": ["risk", "risk"], "confirm": ["question to confirm with an adviser in that country", "question", "question"]}`
-    }]
-  });
-  let review = null;
-  const text = textOf(msg);
-  try {
-    const j = parseJsonLoose(text);
-    const s = (x, n) => clip(x, n);
-    review = {
-      summary: s(j.summary, 500),
-      driver: s(j.driver, 500),
-      risks: (Array.isArray(j.risks) ? j.risks : []).map((x) => s(x, 300)).filter(Boolean).slice(0, 3),
-      confirm: (Array.isArray(j.confirm) ? j.confirm : []).map((x) => s(x, 300)).filter(Boolean).slice(0, 4)
-    };
-  } catch { /* handled below */ }
-  if (!review || !review.summary) {
-    console.log('Route review unreadable', msg.stop_reason, text.slice(0, 300));
-    throw fail(502, 'The AI review could not be written. Please try again.');
-  }
+${WORDING_RULES}
+
+${JSON.stringify(facts)}
+
+Reply only with JSON in this form:
+{"summary": "two sentences on the recommended route for this plan and why", "driver": "one or two sentences on what is driving the route, using the three checks and the cost figures", "risks": ["risk", "risk"], "confirm": ["question to confirm with an adviser in that country", "question", "question"]}`;
+  const review = await writeReview(env, prompt, { summary: 500, driver: 500, risks: [3, 300], confirm: [4, 300] }, allowedNumbers(facts, [24, 36]), 'Route');
   return { tool: 'route', input, model: env.MODEL || DEFAULTS.MODEL, results: maths, review };
 }
 
 // Exported for local tests.
-export const _test = { routeMaths, cleanRouteInput, refMaths, cleanReferralInput, planMaths, cleanPlanInput, placeName, cleanVisibilityInput, questionsFor, scoreAnswers, firstIndex, namePattern, sentenceAround, domainsOf };
+export const _test = { routeFigures, planFigures, refFigures, allowedNumbers, unknownNumbers, numbersIn, writeQuestions, bareCategory, writeReview, routeMaths, cleanRouteInput, refMaths, cleanReferralInput, planMaths, cleanPlanInput, placeName, cleanVisibilityInput, questionsFor, sentencesOf, scoreAnswers, firstIndex, namePattern, sentenceAround, domainsOf };
