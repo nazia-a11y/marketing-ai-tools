@@ -4,9 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI Search Visibility Check</title>
-<meta name="description" content="See how often AI assistants name your brand when buyers ask about your category, compared with your competitors.">
+<meta property="og:type" content="website"><meta property="og:title" content="AI Search Visibility Check"><meta property="og:description" content="How often AI assistants name your brand when buyers ask, and what to do about it."><meta property="og:url" content="https://nazmh-ai-search-visibility.static.hf.space/"><meta property="og:image" content="https://nazmh-ai-search-visibility.static.hf.space/og.jpg"><meta name="twitter:card" content="summary_large_image"><meta name="description" content="How often AI assistants name your brand when buyers ask, and what to do about it.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&family=Schibsted+Grotesk:wght@600;700&display=swap">
 <style>
 :root{--navy:#1C2B4A;--blue:#3E5A8A;--clay:#B07A5A;--clay-soft:#F3E9E2;--line:#E8E2DA;--paper:#F8F6F2;--ink:#1F2430;--muted:#6B6B6B;--bar:#CBC6BE;--bg:#F6F5F2}
 *{box-sizing:border-box}
@@ -65,6 +66,76 @@ summary{cursor:pointer;font-weight:600;color:var(--navy)}
 footer{font-size:12.5px;color:var(--muted);text-align:center}
 @media (max-width:760px){form,.cols{grid-template-columns:1fr}.comps{grid-template-columns:repeat(2,minmax(0,1fr))}.r{grid-template-columns:128px minmax(0,1fr) 48px}}
 @media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+
+/* Demand Gen Digital brand layer. Look only: no logic changes. */
+:root{--dgd-paper:#0F1B20;--dgd-raised:#16242A;--dgd-line:#2A3A40;--dgd-input:#3A4C53;--dgd-ink:#E9EFED;--dgd-muted:#9DAEB4;--dgd-spruce:#5CC0AE;--dgd-spruce-hi:#7DD0C1;--dgd-on-spruce:#0F1B20;--dgd-mist:#16332F;--dgd-signal:#F5B52E;--dgd-on-signal:#0F1B20;--dgd-track:#22333A;--dgd-dim:#4A5D65;--dgd-alert:#F2A79C;color-scheme:dark}
+body{background:var(--dgd-paper);color:var(--dgd-ink);font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif}
+a{color:var(--dgd-spruce)}a:hover{color:var(--dgd-spruce-hi)}
+h1,h2,h3{font-family:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif;color:var(--dgd-ink)}
+h1{font-size:24px;font-weight:700;letter-spacing:-.015em}
+h2{font-weight:600}
+.ttl{display:flex;flex-direction:column;gap:2px}
+.byline{margin:0;font-size:13px;color:var(--dgd-muted);line-height:1.3}
+.byline a{color:var(--dgd-ink);text-decoration-color:var(--dgd-spruce);text-underline-offset:3px}
+.logo{background:transparent!important;border:1px solid var(--dgd-line);border-radius:4px;width:40px;height:40px}
+.logo svg{stroke:var(--dgd-spruce)}
+.tag{background:var(--dgd-mist);color:var(--dgd-spruce);border-radius:2px;font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500;font-size:11.5px}
+.gh{background:transparent;border:1px solid var(--dgd-spruce);color:var(--dgd-spruce);border-radius:2px}
+.gh:hover{background:var(--dgd-spruce);color:var(--dgd-on-spruce)}
+.lead{color:var(--dgd-ink)}
+.card{background:var(--dgd-raised);border-color:var(--dgd-line);border-radius:4px}
+label{color:var(--dgd-ink)}
+.hint,.sub,.note,.legend,.small{color:var(--dgd-muted)}
+input,select{background:var(--dgd-paper);border-color:var(--dgd-input);color:var(--dgd-ink);border-radius:2px}
+input::placeholder{color:#6E7F86}
+input:focus,select:focus,button:focus-visible,a:focus-visible,summary:focus-visible{outline:none;box-shadow:0 0 0 2px #0F1B20,0 0 0 4px #5CC0AE;border-color:var(--dgd-spruce)}
+button.run{background:var(--dgd-spruce);color:var(--dgd-on-spruce);border-radius:2px}
+button.run:hover{background:var(--dgd-spruce-hi)}
+button.run:disabled{background:#2F5E57;color:var(--dgd-ink)}
+.spinner{border-color:currentColor;border-right-color:transparent}
+.err,.total.bad{color:var(--dgd-alert)}
+.banner,.ai .banner{background:var(--dgd-mist);border-left:0;border-radius:4px;color:var(--dgd-ink)}
+summary{color:var(--dgd-ink)}
+th{color:var(--dgd-muted)}
+footer{color:var(--dgd-muted);display:flex;flex-direction:column;align-items:center;gap:8px}
+footer .dgd{display:inline-flex;align-items:center;gap:8px;font-family:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif;font-weight:600;font-size:13px;color:var(--dgd-muted)}
+
+.steps li{background:var(--dgd-raised);border-color:var(--dgd-line);border-radius:4px;color:var(--dgd-muted)}
+.steps .num{background:var(--dgd-mist);color:var(--dgd-spruce);border-radius:2px;font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500}
+.steps b{color:var(--dgd-ink)}
+.sect .num{background:var(--dgd-spruce);color:var(--dgd-on-spruce);border-radius:2px;font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500}
+.tile{background:var(--dgd-mist);border-radius:4px}
+.tile .k,.tile .s{color:var(--dgd-muted)}
+.tile .v{font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500;color:var(--dgd-ink);letter-spacing:-.02em}
+.tiles .tile:first-child{background:var(--dgd-signal)}
+.tiles .tile:first-child .k,.tiles .tile:first-child .s,.tiles .tile:first-child .v{color:var(--dgd-on-signal)}
+.track{background:var(--dgd-track);border-radius:2px}
+.fill{background:var(--dgd-spruce);border-radius:0}
+.fr .v,td.n{font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500}
+.fr .rate{color:var(--dgd-muted)}
+.top td{color:var(--dgd-ink)}
+.top td:first-child::before{background:var(--dgd-spruce)}
+.seg{border-color:var(--dgd-input);border-radius:2px}
+.seg button{color:var(--dgd-muted);border-radius:2px}
+.seg button[aria-pressed=true]{background:var(--dgd-spruce);color:var(--dgd-on-spruce)}
+.stage{background:var(--dgd-mist);color:var(--dgd-ink);border:1px solid #24504A;border-radius:4px}
+.stage span{color:var(--dgd-muted)}
+.move{color:var(--dgd-ink)}
+.move svg{stroke:var(--dgd-spruce)}
+.helper{background:var(--dgd-paper);border-radius:4px}
+.ghost{background:transparent;border-color:var(--dgd-spruce);color:var(--dgd-spruce);border-radius:2px}
+.ghost:hover{background:var(--dgd-spruce);color:var(--dgd-on-spruce)}
+.hero .n{font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500;color:var(--dgd-ink);letter-spacing:-.02em}
+.hero .t{color:var(--dgd-muted)}
+.fill{background:var(--dgd-spruce)}
+.r .fill{background:var(--dgd-dim)}
+.r.you .fill{background:var(--dgd-spruce)}
+.r.you .nm{color:var(--dgd-spruce)}
+.r .v{color:var(--dgd-muted);font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500}
+.quotes li,.empty{background:var(--dgd-paper);border-radius:4px}
+.quotes .q{color:var(--dgd-muted)}
+.byline{display:flex;align-items:center;gap:7px}
+.byline .avatar{width:22px;height:22px;border-radius:50%;object-fit:cover;border:1px solid #2A3A40;flex:none}
 </style>
 </head>
 <body>
@@ -72,7 +143,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
 <header>
   <div class="brand">
     <div class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
-    <h1>AI Search Visibility Check</h1>
+    <div class="ttl"><h1>AI Search Visibility Check</h1><p class="byline"><img class="avatar" src="nazia.jpg" alt="" width="22" height="22">Built by <a href="https://www.linkedin.com/in/naziamh/" target="_blank" rel="noopener" title="Nazia Hossain on LinkedIn">Nazia Hossain</a></p></div>
     <span class="tag">Free tool</span>
   </div>
   <a class="gh" href="https://github.com/nazia-a11y/marketing-ai-tools" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M14 4l-4 16"/></svg>View the code on GitHub</a>
@@ -113,10 +184,13 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
   </details>
 </section>
 
-<footer>Built by <a href="https://www.linkedin.com/in/naziamh/" target="_blank" rel="noopener" title="Nazia Hossain on LinkedIn">Nazia Hossain</a> as an applied AI project · Uses Claude by Anthropic</footer>
+<footer><span class="dgd"><svg class="dgd-mark" viewBox="0 0 44 48" width="18" height="20" aria-hidden="true"><path fill="#5CC0AE" fill-rule="evenodd" d="M8 8H20A16 16 0 0 1 20 40H8Z M16 16V32H20A8 8 0 0 0 20 16Z"/><rect x="18" y="21" width="6" height="6" fill="#F5B52E"/></svg><span>A Demand Gen Digital tool</span></span><span>Nazia Hossain built this tool as an applied AI project. The answers come from Claude, from Anthropic.</span></footer>
 </div>
 
 <script>
+const bareCategory = (c) => c.replace(/^(the|a|an)\s+/i, '').replace(/\s+(category|market|sector|space|industry)$/i, '').trim() || c;
+const perQuestion = (n) => (n === 1 ? 'one answer' : ['', 'one', 'two', 'three', 'four', 'five'][n] ? ['', 'one', 'two', 'three', 'four', 'five'][n] + ' answers' : n + ' answers') + ' per question';
+const listOf = (a) => (a.length > 1 ? a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1] : a.join(''));
 const API = 'https://marketing-tools-api.nazia-ed1.workers.dev';
 
 const place = (c) => (c === 'Global' ? 'all markets' : ['United Kingdom', 'United States', 'Netherlands'].includes(c) ? `the ${c}` : c);
@@ -138,7 +212,7 @@ function panel(title, sub, mode, you, extra) {
     ? '<ul class="quotes">' + mode.quotes.map((q) => `<li><span class="q">${esc(q.question)}</span>“${esc(q.text.replace(/^[-–•*]\s*/, ''))}”</li>`).join('') + '</ul>'
     : `<p class="empty">None of these answers named ${esc(you)}.</p>`;
   return `<section class="card"><h3>${title}</h3><p class="sub">${sub}</p>
-    <div class="hero"><span class="n">${me.mention_rate}%</span><span class="t">${esc(you)} was named in ${me.mentions || 0} of ${mode.answers} answers${me.avg_position ? ` · average position ${me.avg_position}` : ''}</span></div>
+    <div class="hero"><span class="n">${me.mention_rate}%</span><span class="t">${esc(you)} was named in ${me.mentions || 0} of ${mode.answers} answers${me.avg_position ? `, at an average position of ${me.avg_position}` : ''}</span></div>
     ${bars(mode)}
     <p class="legend">Share of answers that named each brand. Hover a bar for the count and average position in the answer.</p>
     ${quotes}${extra || ''}</section>`;
@@ -148,13 +222,13 @@ function render(d, isExample) {
   const you = d.input.brand;
   const web = d.modes.live_web;
   const sources = web.sources && web.sources.length
-    ? '<h3 style="margin-top:16px">Sites live search relied on</h3><ul class="src">' + web.sources.map((s) => `<li>${esc(s.domain)} (${s.times})</li>`).join('') + '</ul>' : '';
+    ? '<h3 style="margin-top:16px">Sites live search relied on</h3><ul class="src">' + web.sources.map((s) => `<li>${esc(s.domain)}, used ${s.times === 1 ? 'once' : s.times + ' times'}</li>`).join('') + '</ul>' : '';
   const when = new Date(d.run_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   $('#results').innerHTML = `
-    <div class="banner">${isExample ? 'Example result. ' : ''}${esc(you)} as a ${esc(d.input.category)} in ${esc(place(d.input.country))}${d.input.competitors.length ? `, compared with ${esc(d.input.competitors.join(', '))}` : ''}. Checked ${when}${d.cached ? ' (saved result from the last 24 hours)' : ''}.</div>
+    <div class="banner">${isExample ? 'Example result. ' : ''}${esc(you)} in the ${esc(bareCategory(d.input.category))} category in ${esc(place(d.input.country))}${d.input.competitors.length ? `, compared with ${esc(listOf(d.input.competitors))}` : ''}. Checked on ${when}${d.cached ? ' (saved result from the last 24 hours)' : ''}.</div>
     <div class="cols" style="margin-top:16px">
-      ${panel('What the model knows', 'Claude with no web access, three answers per question', d.modes.model_knowledge, you)}
-      ${panel('What live search finds', 'Claude with web search, one answer per question', web, you, sources)}
+      ${panel('What the model knows', `Claude with no web access, ${perQuestion((d.repeats && d.repeats.no_web) || 3)}`, d.modes.model_knowledge, you)}
+      ${panel('What live search finds', `Claude with web search, ${perQuestion((d.repeats && d.repeats.web) || 1)}`, web, you, sources)}
     </div>
     <section class="card" style="margin-top:16px"><details><summary>The ${d.questions.length} questions asked</summary><ol>${d.questions.map((q) => `<li>${esc(q)}</li>`).join('')}</ol></details></section>`;
 }

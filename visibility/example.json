@@ -1,1 +1,272 @@
-{"tool":"visibility","input":{"brand":"HubSpot","category":"CRM platform","country":"United Kingdom","competitors":["Salesforce","Zoho CRM","Pipedrive"]},"model":"claude-haiku-5-5","questions":["What are the best CRM platforms in the United Kingdom?","Which CRM platform in the United Kingdom would you recommend for a mid-sized company, and why?","I am comparing CRM platforms in the United Kingdom. Which companies should be on my shortlist?","Who are the leading CRM platforms in the United Kingdom for enterprise customers?","What are the best alternatives to Salesforce as a CRM platform in the United Kingdom?"],"repeats":{"no_web":3,"web":1},"modes":{"model_knowledge":{"answers":15,"rows":[{"name":"HubSpot","is_you":true,"mentions":15,"mention_rate":100,"share_of_voice":14,"avg_position":2.3},{"name":"Salesforce","is_you":false,"mentions":15,"mention_rate":100,"share_of_voice":14,"avg_position":1.5},{"name":"Microsoft Dynamics 365","is_you":false,"mentions":15,"mention_rate":100,"share_of_voice":14,"avg_position":2.8},{"name":"Zoho CRM","is_you":false,"mentions":14,"mention_rate":93,"share_of_voice":13,"avg_position":4.7},{"name":"Pipedrive","is_you":false,"mentions":12,"mention_rate":80,"share_of_voice":11,"avg_position":4.1},{"name":"Sage CRM","is_you":false,"mentions":10,"mention_rate":67,"share_of_voice":9,"avg_position":6.7},{"name":"Capsule CRM","is_you":false,"mentions":9,"mention_rate":60,"share_of_voice":8,"avg_position":6.4},{"name":"Freshsales (Freshworks)","is_you":false,"mentions":7,"mention_rate":47,"share_of_voice":7,"avg_position":6.9},{"name":"Sage Business Cloud","is_you":false,"mentions":7,"mention_rate":47,"share_of_voice":7,"avg_position":8.3},{"name":"Oracle NetSuite","is_you":false,"mentions":2,"mention_rate":13,"share_of_voice":2,"avg_position":10.5}],"quotes":[{"question":"What are the best CRM platforms in the United Kingdom?","text":"- HubSpot: Easy to use, with a generous free tier and strong marketing, sales, and service tools."},{"question":"What are the best CRM platforms in the United Kingdom?","text":"- HubSpot CRM: Free tier is generous, with an intuitive interface and strong marketing, sales, and service tools."},{"question":"What are the best CRM platforms in the United Kingdom?","text":"- HubSpot: Very user-friendly, with a strong free tier and good marketing, sales, and service tools in one place."}]},"live_web":{"answers":5,"rows":[{"name":"HubSpot","is_you":true,"mentions":5,"mention_rate":100,"share_of_voice":18,"avg_position":2.6},{"name":"Salesforce","is_you":false,"mentions":5,"mention_rate":100,"share_of_voice":18,"avg_position":2.8},{"name":"Microsoft Dynamics 365","is_you":false,"mentions":5,"mention_rate":100,"share_of_voice":18,"avg_position":3.4},{"name":"Zoho CRM","is_you":false,"mentions":4,"mention_rate":80,"share_of_voice":14,"avg_position":2.8},{"name":"Pipedrive","is_you":false,"mentions":4,"mention_rate":80,"share_of_voice":14,"avg_position":4.5},{"name":"Capsule CRM","is_you":false,"mentions":2,"mention_rate":40,"share_of_voice":7,"avg_position":4},{"name":"Freshsales (Freshworks)","is_you":false,"mentions":1,"mention_rate":20,"share_of_voice":4,"avg_position":5},{"name":"Sage CRM","is_you":false,"mentions":1,"mention_rate":20,"share_of_voice":4,"avg_position":6},{"name":"Really Simple Systems","is_you":false,"mentions":1,"mention_rate":20,"share_of_voice":4,"avg_position":6}],"quotes":[{"question":"What are the best CRM platforms in the United Kingdom?","text":"- HubSpot CRM is the most frequently recommended free option."},{"question":"Which CRM platform in the United Kingdom would you recommend for a mid-sized company, and why?","text":"My recommendation for most UK mid-sized firms is Zoho CRM, with HubSpot as the main alternative if marketing is your priority."},{"question":"I am comparing CRM platforms in the United Kingdom. Which companies should be on my shortlist?","text":"- HubSpot CRM: Several guides name it the best free option."}],"sources":[{"domain":"crm-online.co.uk","times":4},{"domain":"viewpointanalysis.com","times":4},{"domain":"topchoicefor.com","times":4},{"domain":"crmreviews.co.uk","times":3},{"domain":"milesmarketing.co.uk","times":3},{"domain":"kaeltripton.com","times":3},{"domain":"maximizer.com","times":3},{"domain":"startups.co.uk","times":2}]}},"discovered":["Microsoft Dynamics 365","Capsule CRM","Freshsales (Freshworks)","Sage CRM","Sage Business Cloud","Really Simple Systems","Oracle NetSuite"],"run_at":"2026-11-02T12:19:12.805Z"}
+{
+  "tool": "visibility",
+  "input": {
+    "brand": "Pipedrive",
+    "category": "CRM platform",
+    "country": "United Kingdom",
+    "competitors": [
+      "Salesforce",
+      "HubSpot",
+      "Zoho CRM"
+    ]
+  },
+  "model": "claude-haiku-5-5",
+  "questions": [
+    "What are the best CRM platforms in the United Kingdom?",
+    "Which CRM platform in the United Kingdom would you recommend for a mid-sized company, and why?",
+    "I am comparing CRM platforms in the United Kingdom. Which companies should be on my shortlist?",
+    "Who are the leading CRM platforms in the United Kingdom for enterprise customers?",
+    "What are the best alternatives to Salesforce as a CRM platform in the United Kingdom?"
+  ],
+  "repeats": {
+    "no_web": 3,
+    "web": 1
+  },
+  "modes": {
+    "model_knowledge": {
+      "answers": 15,
+      "rows": [
+        {
+          "name": "Salesforce",
+          "is_you": false,
+          "mentions": 15,
+          "mention_rate": 100,
+          "share_of_voice": 12,
+          "avg_position": 1.7
+        },
+        {
+          "name": "HubSpot",
+          "is_you": false,
+          "mentions": 15,
+          "mention_rate": 100,
+          "share_of_voice": 12,
+          "avg_position": 2.9
+        },
+        {
+          "name": "Microsoft Dynamics 365",
+          "is_you": false,
+          "mentions": 15,
+          "mention_rate": 100,
+          "share_of_voice": 12,
+          "avg_position": 2.5
+        },
+        {
+          "name": "Sage CRM",
+          "is_you": false,
+          "mentions": 14,
+          "mention_rate": 93,
+          "share_of_voice": 11,
+          "avg_position": 7.1
+        },
+        {
+          "name": "Zoho CRM",
+          "is_you": false,
+          "mentions": 13,
+          "mention_rate": 87,
+          "share_of_voice": 10,
+          "avg_position": 4.8
+        },
+        {
+          "name": "Pipedrive",
+          "is_you": true,
+          "mentions": 12,
+          "mention_rate": 80,
+          "share_of_voice": 9,
+          "avg_position": 4.9
+        },
+        {
+          "name": "Capsule CRM",
+          "is_you": false,
+          "mentions": 9,
+          "mention_rate": 60,
+          "share_of_voice": 7,
+          "avg_position": 7.4
+        },
+        {
+          "name": "SAP Sales Cloud",
+          "is_you": false,
+          "mentions": 8,
+          "mention_rate": 53,
+          "share_of_voice": 6,
+          "avg_position": 5.4
+        },
+        {
+          "name": "Freshsales (Freshworks)",
+          "is_you": false,
+          "mentions": 7,
+          "mention_rate": 47,
+          "share_of_voice": 5,
+          "avg_position": 6.7
+        },
+        {
+          "name": "Oracle CX",
+          "is_you": false,
+          "mentions": 7,
+          "mention_rate": 47,
+          "share_of_voice": 5,
+          "avg_position": 6.1
+        }
+      ],
+      "quotes": [
+        {
+          "question": "What are the best CRM platforms in the United Kingdom?",
+          "text": "- Pipedrive: Simple, visual, sales-focused pipeline management."
+        },
+        {
+          "question": "What are the best CRM platforms in the United Kingdom?",
+          "text": "- Pipedrive: Visual, pipeline-focused, and simple for sales teams."
+        },
+        {
+          "question": "What are the best CRM platforms in the United Kingdom?",
+          "text": "- Pipedrive: Visual pipeline, simple to set up, popular with sales-led small and mid-sized teams."
+        }
+      ]
+    },
+    "live_web": {
+      "answers": 5,
+      "rows": [
+        {
+          "name": "Salesforce",
+          "is_you": false,
+          "mentions": 5,
+          "mention_rate": 100,
+          "share_of_voice": 16,
+          "avg_position": 2
+        },
+        {
+          "name": "HubSpot",
+          "is_you": false,
+          "mentions": 5,
+          "mention_rate": 100,
+          "share_of_voice": 16,
+          "avg_position": 2
+        },
+        {
+          "name": "Microsoft Dynamics 365",
+          "is_you": false,
+          "mentions": 5,
+          "mention_rate": 100,
+          "share_of_voice": 16,
+          "avg_position": 4.8
+        },
+        {
+          "name": "Zoho CRM",
+          "is_you": false,
+          "mentions": 4,
+          "mention_rate": 80,
+          "share_of_voice": 13,
+          "avg_position": 2
+        },
+        {
+          "name": "Workbooks",
+          "is_you": false,
+          "mentions": 4,
+          "mention_rate": 80,
+          "share_of_voice": 13,
+          "avg_position": 6
+        },
+        {
+          "name": "Pipedrive",
+          "is_you": true,
+          "mentions": 3,
+          "mention_rate": 60,
+          "share_of_voice": 10,
+          "avg_position": 4
+        },
+        {
+          "name": "Capsule CRM",
+          "is_you": false,
+          "mentions": 2,
+          "mention_rate": 40,
+          "share_of_voice": 6,
+          "avg_position": 5
+        },
+        {
+          "name": "Sage CRM",
+          "is_you": false,
+          "mentions": 1,
+          "mention_rate": 20,
+          "share_of_voice": 3,
+          "avg_position": 6
+        },
+        {
+          "name": "Oracle CX",
+          "is_you": false,
+          "mentions": 1,
+          "mention_rate": 20,
+          "share_of_voice": 3,
+          "avg_position": 4
+        },
+        {
+          "name": "SAP Sales Cloud",
+          "is_you": false,
+          "mentions": 1,
+          "mention_rate": 20,
+          "share_of_voice": 3,
+          "avg_position": 5
+        }
+      ],
+      "quotes": [
+        {
+          "question": "What are the best CRM platforms in the United Kingdom?",
+          "text": "- Pipedrive: A good fit if your main need is a straightforward sales pipeline."
+        },
+        {
+          "question": "I am comparing CRM platforms in the United Kingdom. Which companies should be on my shortlist?",
+          "text": "- Pipedrive: Suited to a straightforward sales process."
+        },
+        {
+          "question": "What are the best alternatives to Salesforce as a CRM platform in the United Kingdom?",
+          "text": "- Pipedrive: A sales-first tool."
+        }
+      ],
+      "sources": [
+        {
+          "domain": "crm-online.co.uk",
+          "times": 4
+        },
+        {
+          "domain": "crmreviews.co.uk",
+          "times": 4
+        },
+        {
+          "domain": "viewpointanalysis.com",
+          "times": 4
+        },
+        {
+          "domain": "kaeltripton.com",
+          "times": 4
+        },
+        {
+          "domain": "topchoicefor.com",
+          "times": 3
+        },
+        {
+          "domain": "maximizer.com",
+          "times": 3
+        },
+        {
+          "domain": "startups.co.uk",
+          "times": 2
+        },
+        {
+          "domain": "relativity.co.uk",
+          "times": 2
+        }
+      ]
+    }
+  },
+  "discovered": [
+    "Microsoft Dynamics 365",
+    "Freshsales (Freshworks)",
+    "Insightly",
+    "Sage CRM",
+    "Sage Business Cloud",
+    "Capsule CRM",
+    "Really Simple Systems",
+    "Oracle CX",
+    "SAP Sales Cloud",
+    "Workbooks"
+  ],
+  "run_at": "2026-11-06T19:18:52.241Z"
+}
