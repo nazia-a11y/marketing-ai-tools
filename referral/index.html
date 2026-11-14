@@ -312,6 +312,8 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const int = (n) => Math.round(n).toLocaleString('en-GB');
 const one = (n) => (n < 10 ? (Math.round(n * 10) / 10).toLocaleString('en-GB') : int(n));
 const pct = (n) => `${+(+n).toFixed(1)}%`;
+const months = (n) => (one(n) === '0' ? 'less than a month' : `${one(n)} month${one(n) === '1' ? '' : 's'}`);
+const customers = (n) => `${one(n)} customer${one(n) === '1' ? '' : 's'}`;
 let money = (n) => n;
 let example = null;
 let lastReviewKey = null;
@@ -366,9 +368,9 @@ function renderNumbers() {
   $('#tiles').innerHTML =
     tile('New customers from referrals', one(m.new_customers), `${pct(m.share_of_base_pct)} growth on today's base`) +
     tile('Annual revenue added', money(m.arr_added), 'From the new referred customers') +
-    tile('Cost per new customer', m.cost_per_customer === null ? 'None yet' : money(m.cost_per_customer), `Against ${money(i.paid_cac)} through paid channels`) +
+    tile('Cost per new customer', m.new_customers < 1 || m.cost_per_customer === null ? 'None yet' : money(m.cost_per_customer), `Against ${money(i.paid_cac)} through paid channels`) +
     tile(saving >= 0 ? 'Saving against paid channels' : 'Extra cost against paid channels', money(Math.abs(saving)),
-      m.payback_months === null ? `Programme cost ${money(m.total_cost)}` : `Programme cost ${money(m.total_cost)}, paid back in ${one(m.payback_months)} months`);
+      m.new_customers < 1 || m.payback_months === null ? `Programme cost ${money(m.total_cost)}` : `Programme cost ${money(m.total_cost)}, paid back in ${months(m.payback_months)}`);
   $('#warns').innerHTML = m.warnings.map((w) => `<p class="warn">${esc(w)}</p>`).join('');
   const conv = `${pct(m.rates.convert)} become paying${i.motion === 'sales_led' ? ', about three months later' : ''}`;
   const arrow = (t) => `<div class="move"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B07A5A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg>${t}</div>`;
@@ -378,10 +380,10 @@ function renderNumbers() {
   let run = 0;
   const totals = m.monthly_new_customers.map((x) => (run += x));
   const max = Math.max(...totals, 0.0001);
-  $('#bars').innerHTML = totals.map((t, k) => `<span style="height:${(t / max) * 100}%" title="Month ${k + 1}: ${one(t)} customers in total"></span>`).join('');
+  $('#bars').innerHTML = totals.map((t, k) => `<span style="height:${(t / max) * 100}%" title="Month ${k + 1}: ${customers(t)} in total"></span>`).join('');
   $('#axis').innerHTML = totals.map((_, k) => `<span>${k + 1}</span>`).join('');
-  $('#rampnote').textContent = `Month 1 to 12. The programme builds to full strength over six months${i.motion === 'sales_led' ? ', and referred deals take about three months to close, so ' + one(m.still_in_pipeline) + ' more customers are still in the pipeline at the end of the year' : ''}.`;
-  $('#whatif').innerHTML = m.what_if.map((w, idx) => `<tr class="${idx === 0 ? 'top' : ''}"><td>${w.lever}</td><td class="n">${pct(w.from)} → ${pct(w.to)}</td><td class="n c3">${one(w.extra_customers)}</td><td class="n">${money(w.extra_arr)}</td></tr>`).join('');
+  $('#rampnote').textContent = `Month 1 to 12. The programme builds to full strength over six months${i.motion === 'sales_led' ? ', and referred deals take about three months to close' + (one(m.still_in_pipeline) === '0' ? '' : ', so ' + customers(m.still_in_pipeline).replace(/ (customers?)$/, ' more $1') + (one(m.still_in_pipeline) === '1' ? ' is' : ' are') + ' still in the pipeline at the end of the year') : ''}.`;
+  $('#whatif').innerHTML = m.what_if.map((w, idx) => `<tr class="${idx === 0 ? 'top' : ''}"><td>${w.lever}</td><td class="n">${pct(w.from)} → ${pct(w.to)}</td><td class="n c3">${w.extra_arr > 0 && one(w.extra_customers) === '0' ? 'under 0.1' : one(w.extra_customers)}</td><td class="n">${money(w.extra_arr)}</td></tr>`).join('');
   $('#lifenote').textContent = m.rates.churn_cut
     ? `Referred customers also tend to stay longer. At ${pct(i.churn)} lost a year, a typical customer is worth about ${money(m.lifetime_value_normal)} over their lifetime, and a referred one about ${money(m.lifetime_value_referred)}.`
     : `At ${pct(i.churn)} lost a year, each customer is worth about ${money(m.lifetime_value_normal)} over their lifetime. Cautious assumptions do not count on referred customers staying longer.`;

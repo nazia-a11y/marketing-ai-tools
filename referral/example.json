@@ -13,6 +13,7 @@
   },
   "model": "claude-haiku-5-5",
   "results": {
+    "verdict": "worth_running_modest",
     "rates": {
       "refer": 5,
       "signup": 15,
@@ -20,23 +21,27 @@
       "churn_cut": 18
     },
     "referrers": 1429,
+    "referrals_per_100_customers": 48,
     "signups": 214.3,
     "new_customers": 17.1,
     "still_in_pipeline": 0,
-    "arr_added": 61719,
+    "yearly_revenue_added": 61719,
     "share_of_base_pct": 0.6,
     "reward_cost": 6172,
     "running_cost": 4800,
     "total_cost": 10972,
     "cost_per_customer": 640,
-    "paid_cost_same_customers": 41146,
-    "saving_vs_paid": 30174,
     "payback_months": 2.1,
+    "return_per_pound": 5.63,
+    "paid_cost_same_customers": 41146,
+    "paid_payback_months": 8,
+    "customers_needed_to_pay_back": 1.5,
+    "customer_base_to_pay_back": 259,
     "reward_pct_of_acv": 10,
     "lifetime_years_normal": 8.3,
     "lifetime_years_referred": 10,
-    "lifetime_value_normal": 30000,
-    "lifetime_value_referred": 36000,
+    "lifetime_revenue_normal": 30000,
+    "lifetime_revenue_referred": 36000,
     "monthly_new_customers": [
       0.3,
       0.6,
@@ -57,38 +62,37 @@
         "from": 15,
         "to": 20,
         "extra_customers": 5.7,
-        "extra_arr": 20644
+        "extra_yearly_revenue": 20644
       },
       {
         "lever": "Customers who refer each month",
         "from": 5,
         "to": 6,
         "extra_customers": 3.4,
-        "extra_arr": 12382
+        "extra_yearly_revenue": 12382
       },
       {
         "lever": "Sign-ups who become paying",
         "from": 8,
         "to": 9,
         "extra_customers": 2.1,
-        "extra_arr": 7737
+        "extra_yearly_revenue": 7737
       }
     ],
     "warnings": []
   },
   "review": {
-    "summary": "A referral programme looks worth testing because, on typical assumptions, it adds about 17 customers and £61,719 in ARR for a total cost of about £10,972, roughly £640 per customer against £2,400 for paid acquisition. The absolute gains are small against a base of 3,000 customers, and every result rests on benchmark rates rather than your own data, so this should be a measured pilot, not a firm commitment.",
-    "lever": "The figure that matters most is the share of referred people who sign up. Raising it from 15% to 20% adds about 5.7 customers and £20,644 in ARR, which is more than raising the referral rate (3.4 customers, £12,382) or the sign-up conversion rate (2.1 customers, £7,737).",
+    "summary": "A referral programme looks worth running alongside your existing channels, but only as a modest addition. With your 3,000 paying customers, it would add 17 new customers in a year, 0.6% growth on today's base, and £61,719 of yearly revenue, for a programme cost of £10,972 that pays back in 2.1 months.",
+    "lever": "The number that matters most is the share of referred people who sign up, currently 15%. Raising it to 20% would bring in 5.7 extra customers in a year and £20,644 of extra yearly revenue.",
     "risks": [
-      "The refer, sign-up and conversion rates are preset benchmarks, not measured from your customers, so the real outcome could be well below the modelled 17 customers.",
-      "The £30,174 saving against paid channels assumes that the same customers would otherwise have been bought with paid spend at £2,400 each, which may not hold for every deal.",
-      "Monthly new customers only reach about 1.8 after the seventh month, so the first year brings in few customers, and the 18% churn reduction on referred customers is also an assumption that has not been tested."
+      "The gain is small in absolute terms, so the programme will not change your growth on its own, and the result depends on the Typical assumptions holding for your business.",
+      "Your 12% of customers lost a year is a steady drain that referrals will not fix, so retention work may matter at least as much as the programme."
     ],
     "actions": [
-      "Run a 90-day pilot with a small group of existing customers to measure real referral, sign-up and conversion rates before committing the full £400 monthly running cost.",
-      "Set up referral tracking from day one so you can compare referred customers' churn and lifetime value with the rest of the base.",
-      "Test the reward level and the sign-up journey first, since a higher sign-up rate has the largest effect on results, and scale only if the measured figures beat the paid acquisition benchmark."
+      "Start with a small test for a few months before committing the full £400 a month running cost.",
+      "Work on the sign-up experience for referred people first, since turning more of them into sign-ups has the biggest effect.",
+      "Track how many customers actually refer each month against the 5% assumption, then recheck the 2.1 months payback with real figures."
     ]
   },
-  "run_at": "2026-11-04T13:34:31.626Z"
+  "run_at": "2026-11-14T00:49:38.642Z"
 }
