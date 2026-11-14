@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Referral Revenue Calculator</title>
 <meta name="description" content="See what a customer referral programme could add to a B2B software company in a year, what it would cost, and how it compares with paid channels, then get a plain-English review from Claude.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&family=Schibsted+Grotesk:wght@600;700&display=swap">
 <style>
 :root{--navy:#1C2B4A;--blue:#3E5A8A;--clay:#B07A5A;--line:#E8E2DA;--paper:#F8F6F2;--ink:#1F2430;--muted:#6B6B6B;--bg:#F6F5F2}
 *{box-sizing:border-box}
@@ -89,6 +89,88 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
 @media (max-width:700px){.steps{grid-template-columns:1fr}}
 @media (max-width:520px){.seg{display:grid;grid-template-columns:1fr 1fr;border-radius:12px;width:100%}.seg.three{grid-template-columns:1fr 1fr 1fr}.seg button{border-radius:9px;font-size:13px;padding:6px 8px}.grid2,.tiles{grid-template-columns:1fr}.wi .c3{display:none}.wi th.n{white-space:normal}.axis{font-size:10px}}
 @media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+/* Demand Gen Digital brand layer. Look only: no logic changes. */
+/* Demand Gen Digital brand layer. Look only: no logic changes. */
+:root{--dgd-paper:#0F1B20;--dgd-raised:#16242A;--dgd-line:#2A3A40;--dgd-input:#3A4C53;--dgd-ink:#E9EFED;--dgd-muted:#9DAEB4;--dgd-spruce:#5CC0AE;--dgd-spruce-hi:#7DD0C1;--dgd-on-spruce:#0F1B20;--dgd-mist:#16332F;--dgd-signal:#F5B52E;--dgd-on-signal:#0F1B20;--dgd-track:#22333A;--dgd-dim:#4A5D65;--dgd-alert:#F2A79C;color-scheme:dark}
+body{background:var(--dgd-paper);color:var(--dgd-ink);font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif}
+a{color:var(--dgd-spruce)}a:hover{color:var(--dgd-spruce-hi)}
+h1,h2,h3{font-family:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif;color:var(--dgd-ink)}
+h1{font-size:24px;font-weight:700;letter-spacing:-.015em}
+h2{font-weight:600}
+.ttl{display:flex;flex-direction:column;gap:2px}
+.byline{margin:0;font-size:13px;color:var(--dgd-muted);line-height:1.3}
+.byline a{color:var(--dgd-ink);text-decoration-color:var(--dgd-spruce);text-underline-offset:3px}
+.logo{background:transparent!important;border:1px solid var(--dgd-line);border-radius:4px;width:40px;height:40px}
+.logo svg{stroke:var(--dgd-spruce)}
+.tag{background:var(--dgd-mist);color:var(--dgd-spruce);border-radius:2px;font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500;font-size:11.5px}
+.gh{background:transparent;border:1px solid var(--dgd-spruce);color:var(--dgd-spruce);border-radius:2px}
+.gh:hover{background:var(--dgd-spruce);color:var(--dgd-on-spruce)}
+.lead{color:var(--dgd-ink)}
+.card{background:var(--dgd-raised);border-color:var(--dgd-line);border-radius:4px}
+label{color:var(--dgd-ink)}
+.hint,.sub,.note,.legend,.small{color:var(--dgd-muted)}
+input,select{background:var(--dgd-paper);border-color:var(--dgd-input);color:var(--dgd-ink);border-radius:2px}
+input::placeholder{color:#6E7F86}
+input:focus,select:focus,button:focus-visible,a:focus-visible,summary:focus-visible{outline:none;box-shadow:0 0 0 2px #0F1B20,0 0 0 4px #5CC0AE;border-color:var(--dgd-spruce)}
+button.run{background:var(--dgd-spruce);color:var(--dgd-on-spruce);border-radius:2px}
+button.run:hover{background:var(--dgd-spruce-hi)}
+button.run:disabled{background:#2F5E57;color:var(--dgd-ink)}
+.spinner{border-color:currentColor;border-right-color:transparent}
+.err,.total.bad{color:var(--dgd-alert)}
+.banner,.ai .banner{background:var(--dgd-mist);border-left:0;border-radius:4px;color:var(--dgd-ink)}
+summary{color:var(--dgd-ink)}
+th{color:var(--dgd-muted)}
+footer{color:var(--dgd-muted);display:flex;flex-direction:column;align-items:center;gap:8px}
+footer .dgd{display:inline-flex;align-items:center;gap:8px;font-family:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif;font-weight:600;font-size:13px;color:var(--dgd-muted)}
+
+.steps li{background:var(--dgd-raised);border-color:var(--dgd-line);border-radius:4px;color:var(--dgd-muted)}
+.steps .num{background:var(--dgd-mist);color:var(--dgd-spruce);border-radius:2px;font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500}
+.steps b{color:var(--dgd-ink)}
+.sect .num{background:var(--dgd-spruce);color:var(--dgd-on-spruce);border-radius:2px;font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500}
+.tile{background:var(--dgd-mist);border-radius:4px}
+.tile .k,.tile .s{color:var(--dgd-muted)}
+.tile .v{font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500;color:var(--dgd-ink);letter-spacing:-.02em}
+.tiles .tile:first-child{background:var(--dgd-signal)}
+.tiles .tile:first-child .k,.tiles .tile:first-child .s,.tiles .tile:first-child .v{color:var(--dgd-on-signal)}
+.track{background:var(--dgd-track);border-radius:2px}
+.fill{background:var(--dgd-spruce);border-radius:0}
+.fr .v,td.n{font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500}
+.fr .rate{color:var(--dgd-muted)}
+.top td{color:var(--dgd-ink)}
+.top td:first-child::before{background:var(--dgd-spruce)}
+.seg{border-color:var(--dgd-input);border-radius:2px}
+.seg button{color:var(--dgd-muted);border-radius:2px}
+.seg button[aria-pressed=true]{background:var(--dgd-spruce);color:var(--dgd-on-spruce)}
+.stage{background:var(--dgd-mist);color:var(--dgd-ink);border:1px solid #24504A;border-radius:4px}
+.stage span{color:var(--dgd-muted)}
+.move{color:var(--dgd-ink)}
+.move svg{stroke:var(--dgd-spruce)}
+.helper{background:var(--dgd-paper);border-radius:4px}
+.ghost{background:transparent;border-color:var(--dgd-spruce);color:var(--dgd-spruce);border-radius:2px}
+.ghost:hover{background:var(--dgd-spruce);color:var(--dgd-on-spruce)}
+.hero .n{font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500;color:var(--dgd-ink);letter-spacing:-.02em}
+.hero .t{color:var(--dgd-muted)}
+.fill{background:var(--dgd-spruce)}
+.r .fill{background:var(--dgd-dim)}
+.r.you .fill{background:var(--dgd-spruce)}
+.r.you .nm{color:var(--dgd-spruce)}
+.r .v{color:var(--dgd-muted);font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500}
+.quotes li,.empty{background:var(--dgd-paper);border-radius:4px}
+.quotes .q{color:var(--dgd-muted)}
+
+.hint[style]{color:var(--dgd-ink)!important}
+.warn{background:#33291A;border-left:3px solid var(--dgd-signal);color:#F5D79A;border-radius:0 4px 4px 0}
+.bars{border-color:var(--dgd-line)}
+.bars span{background:var(--dgd-spruce);border-radius:2px 2px 0 0}
+.bars span:hover{background:var(--dgd-signal)}
+.axis{color:var(--dgd-muted)}
+.presets{background:var(--dgd-paper);color:var(--dgd-ink);border-radius:4px}
+.presets b{color:var(--dgd-ink);font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500}
+.src{color:var(--dgd-muted)}
+.stage b{font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500}
+.wi td,.wi th{border-color:var(--dgd-line)}
+.byline{display:flex;align-items:center;gap:7px}
+.byline .avatar{width:22px;height:22px;border-radius:50%;object-fit:cover;border:1px solid #2A3A40;flex:none}
 </style>
 </head>
 <body>
@@ -96,7 +178,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
 <header>
   <div class="brand">
     <div class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="16" r="3"/><path d="M10.5 10.5l4 3.5"/><path d="M3 20c.8-3 2.6-5 5-5"/></svg></div>
-    <h1>Referral Revenue Calculator</h1>
+    <div class="ttl"><h1>Referral Revenue Calculator</h1><p class="byline"><img class="avatar" src="nazia.jpg" alt="" width="22" height="22">Built by <a href="https://www.linkedin.com/in/naziamh/" target="_blank" rel="noopener" title="Nazia Hossain on LinkedIn">Nazia Hossain</a></p></div>
     <span class="tag">Free tool</span>
   </div>
   <a class="gh" href="https://github.com/nazia-a11y/marketing-ai-tools/tree/main/referral" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M14 4l-4 16"/></svg>View the code on GitHub</a>
@@ -198,7 +280,7 @@ footer{font-size:12.5px;color:var(--muted);text-align:center}
   </details>
 </section>
 
-<footer>Built by <a href="https://www.linkedin.com/in/naziamh/" target="_blank" rel="noopener" title="Nazia Hossain on LinkedIn">Nazia Hossain</a> as an applied AI project, using Claude by Anthropic.</footer>
+<footer><span class="dgd"><svg class="dgd-mark" viewBox="0 0 44 48" width="18" height="20" aria-hidden="true"><path fill="#5CC0AE" fill-rule="evenodd" d="M8 8H20A16 16 0 0 1 20 40H8Z M16 16V32H20A8 8 0 0 0 20 16Z"/><rect x="18" y="21" width="6" height="6" fill="#F5B52E"/></svg><span>A Demand Gen Digital tool</span></span><span>Nazia Hossain built this tool as an applied AI project. The review is written by Claude, from Anthropic.</span></footer>
 </div>
 
 <script>
@@ -373,7 +455,7 @@ function renderNumbers() {
       m.new_customers < 1 || m.payback_months === null ? `Programme cost ${money(m.total_cost)}` : `Programme cost ${money(m.total_cost)}, paid back in ${months(m.payback_months)}`);
   $('#warns').innerHTML = m.warnings.map((w) => `<p class="warn">${esc(w)}</p>`).join('');
   const conv = `${pct(m.rates.convert)} become paying${i.motion === 'sales_led' ? ', about three months later' : ''}`;
-  const arrow = (t) => `<div class="move"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B07A5A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg>${t}</div>`;
+  const arrow = (t) => `<div class="move"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5CC0AE" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg>${t}</div>`;
   const box = (label, v, w) => `<div class="stage" style="width:${w}%">${label}<b>${v}</b></div>`;
   $('#flow').innerHTML = box('Referrals made by customers', int(m.referrers), 100) + arrow(`${pct(m.rates.signup)} sign up`) +
     box('People who sign up', one(m.signups), 84) + arrow(conv) + box('New paying customers', one(m.new_customers), 68);
